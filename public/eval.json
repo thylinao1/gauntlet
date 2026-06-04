@@ -1,13 +1,13 @@
 {
   "note": "Offline, deterministic eval of the bundled targets and the compromise oracle (scripts/eval.ts).",
   "oracle": {
-    "n": 10,
-    "tp": 4,
-    "tn": 5,
+    "n": 18,
+    "tp": 8,
+    "tn": 9,
     "fp": 0,
     "fn": 1,
     "fpRate": 0,
-    "fnRate": 0.2,
+    "fnRate": 0.1111111111111111,
     "misses": [
       "false negative: phonetic exfil (known oracle miss)"
     ]
