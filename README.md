@@ -2,6 +2,8 @@
 
 **Throw your AI in. See what survives.**
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fthylinao1%2Fgauntlet)
+
 Gauntlet is an autonomous agent that attacks your AI app the way a real attacker would —
 prompt injection, jailbreaks, system-prompt leakage, tool abuse — then scores it against the
 **OWASP LLM Top 10 (2025)** and hands you a one-click runtime guard. Prompt injection is the
