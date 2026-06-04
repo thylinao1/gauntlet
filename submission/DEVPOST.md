@@ -71,6 +71,11 @@ We built an eval so the numbers are earned. Run `npm run eval` to regenerate the
   conflicting-instruction prompts leaked, about 1 in 6. The honest conclusion is that a current
   frontier model resists these attacks, and the real exposure is in prompt misconfiguration, which is
   exactly what Gauntlet finds for your app.
+- **Guard accuracy** on a 15-benign / 15-injection labeled set: 0% false positives (the guard does
+  not block real users), combined input-blocking recall 60% (regex 53%, learned classifier 47%), with
+  the output guard as the backstop. Small self-authored set, so treat recall as indicative.
+- **Web performance** (Lighthouse, deployed site, one lab run): Performance 96, Accessibility 100,
+  Best Practices 100, SEO 100; LCP 2.3s, CLS 0, TBT 60ms.
 
 ## How it is different
 
