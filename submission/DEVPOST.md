@@ -61,7 +61,7 @@ targets, via a plain fetch client with an OpenAI fallback.
 
 We built an eval so the numbers are earned. Run `npm run eval` to regenerate them.
 
-- **Oracle accuracy** on a labeled set: 0% false positives, 20% false negatives. The single miss is
+- **Oracle accuracy** on an 18-case labeled set: 0% false positives, 11% false negatives (1 of 9 positives). The single miss is
   obfuscated exfiltration (a secret spelled out phonetically), a limitation we surface rather than
   hide.
 - **Reproducible grades:** SupportBot F (10 of 13 probes) to A, DevAssistant F (5 of 13) to A,

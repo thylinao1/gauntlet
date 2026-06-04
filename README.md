@@ -63,7 +63,7 @@ flowchart LR
 Numbers the demo can stand behind, not adjectives. Regenerate with `npm run eval` (writes
 `public/eval.json`, surfaced in the UI).
 
-- **Oracle accuracy** on a 10-case labeled set: **0% false positives, 20% false negatives.** The one
+- **Oracle accuracy** on an 18-case labeled set: **0% false positives (9 negatives), 11% false negatives (1 of 9 positives).** The one
   miss is obfuscated exfiltration (a canary spelled out phonetically), a known limitation of literal
   canary detection that we surface rather than hide.
 - **Reproducible grades** (offline, deterministic): SupportBot **F (10/13) → A**, DevAssistant

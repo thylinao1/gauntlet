@@ -35,7 +35,7 @@ from `eval-screens/` for slides 3 and 4.
 
 ## Slide 5 — We measured it (the honest slide)
 **Numbers we earned, not adjectives.**
-- Oracle: 0% false positives, 20% false negatives on a labeled set (the miss is documented).
+- Oracle: 0% false positives, 11% false negatives on an 18-case labeled set (the miss is documented).
 - A real frontier model mostly holds; only conflicting-instruction prompts leaked (~1 in 6).
 - The real risk is prompt misconfiguration, and that is what Gauntlet surfaces.
 - Visual: the `npm run eval` output.

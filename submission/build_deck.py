@@ -146,7 +146,7 @@ s = prs.slides.add_slide(BLANK); bg(s); bar(s)
 kicker(s, "WE MEASURED IT (THE HONEST SLIDE)")
 title(s, "Numbers we earned, not adjectives.")
 bullets(s, [
-    ("Oracle: 0% false positives, 20% false negatives on a labeled set (the miss is documented).", TEXT),
+    ("Oracle: 0% false positives, 11% false negatives on an 18-case labeled set (the miss is documented).", TEXT),
     ("Reproducible grades: SupportBot F(10/13), DevAssistant F(5/13), PolicyBot F(9/13), all to A.", TEXT),
     ("A real frontier model mostly holds: ~40 probes, only conflicting-instruction prompts leaked (~1 in 6).", TEXT),
     ("The real risk is prompt misconfiguration, and that is what Gauntlet surfaces for your app.", SIGNAL),
