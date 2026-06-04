@@ -42,11 +42,16 @@ flowchart LR
 
 - **Deterministic compromise detection.** Each target plants a **canary** secret; an attack
   "succeeds" only if the canary appears in the output. No flaky LLM-judge guesswork on stage.
-- **Black-box, OWASP-mapped.** Tests LLM01 (prompt injection), LLM02 (sensitive info disclosure),
-  LLM06 (excessive agency), LLM07 (system-prompt leakage). LLM05/LLM10 and training-time risks
-  (LLM03/04/08) are on the roadmap.
-- **The guard is a real (basic) defense:** a pattern-based input firewall + output secret
-  redaction + tool allow-list. It is honest risk-reduction, not a "100% safe" claim.
+- **Black-box, OWASP-mapped.** Tests six categories: LLM01 (prompt injection), LLM02 (sensitive
+  info disclosure), LLM05 (improper output handling), LLM06 (excessive agency), LLM07 (system-prompt
+  leakage), and LLM10 (unbounded consumption). Training-time risks (LLM03/04/08) are out of scope.
+- **The guard is layered, deterministic, and free at runtime.** It normalizes and decodes input
+  (NFKC, zero-width and homoglyph stripping, base64 and hex decoding) so encoded or unicode-disguised
+  attacks cannot slip past a word list, scores it with weighted intent patterns, then sanitizes
+  output (secret redaction, markup neutralizing, length caps). This is honest risk reduction, not a
+  "100% safe" claim. A determined attacker can still paraphrase around any static ruleset, so the
+  production upgrade is a local, free, trained classifier such as Meta Llama Prompt Guard 2 or
+  protectai/deberta-v3-base-prompt-injection.
 
 ## Run it
 
