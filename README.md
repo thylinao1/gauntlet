@@ -139,9 +139,16 @@ ANTHROPIC_API_KEY=sk-ant-...                 # or OPENAI_API_KEY
 ```
 
 Then run **`npm run dev:live`**. On any error (missing key, bad response, parse failure) it falls
-back to the offline seeded corpus, so the demo never breaks. Live spend is gated by an hourly budget
-and a per-IP rate limit, and the real-model targets only call a model when the run is budget-authorized,
-so the public deployment does not spend on every click.
+back to the offline seeded corpus, so the demo never breaks.
+
+**Spending cap.** Live spend is gated by a global budget (a fixed number of paid runs,
+`GAUNTLET_LIVE_BUDGET`, default 40, roughly two dollars on Haiku) plus a per-IP rate limit. The
+budget is backed by Upstash or Vercel KV when `UPSTASH_REDIS_REST_URL`/`KV_REST_API_URL` is present,
+so the cap holds across all serverless instances; without it, it falls back to a per-instance counter.
+When the budget is reached, runs fall back to the seeded corpus and the UI shows a calm "owner set a
+limit" notice (not an error). The owner resets it with
+`curl -X POST <site>/api/admin/reset -H "x-admin-secret: $GAUNTLET_ADMIN_SECRET"`. Optionally set
+`GAUNTLET_OWNER_CONTACT` so the notice tells visitors how to reach you for a reset.
 
 ## Stack
 
