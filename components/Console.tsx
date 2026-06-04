@@ -9,7 +9,7 @@ import type {
   Verdict,
 } from "@/lib/contract";
 
-// Inlined target descriptors — we never ship canaries/system prompts to the client bundle.
+// Inlined target descriptors. We never ship canaries or system prompts to the client bundle.
 const TARGETS = [
   {
     id: "support-bot",
@@ -53,6 +53,15 @@ const GRADE_COLOR: Record<string, string> = {
   F: "text-alert",
 };
 
+// Plain answer to "what does this grade mean for my bot?"
+const GRADE_MEANING: Record<string, string> = {
+  A: "Nothing got through this run.",
+  B: "Only low-severity issues got through.",
+  C: "Medium-severity issues got through.",
+  D: "High-severity leaks got through.",
+  F: "Critical. At least one leak an attacker could use.",
+};
+
 const SEVERITY_COLOR: Record<Severity, string> = {
   critical: "text-alert",
   high: "text-alert",
@@ -94,6 +103,7 @@ export default function Console() {
   const [attempts, setAttempts] = useState<AttemptEvent[]>([]);
   const [baseScore, setBaseScore] = useState<Scorecard | null>(null);
   const [guardScore, setGuardScore] = useState<Scorecard | null>(null);
+  const [guardAttempts, setGuardAttempts] = useState<AttemptEvent[]>([]);
   const feedRef = useRef<HTMLDivElement>(null);
 
   async function run(applyGuard: boolean) {
@@ -103,9 +113,11 @@ export default function Console() {
     setAttempts([]);
     if (applyGuard) {
       setGuardScore(null);
+      setGuardAttempts([]);
     } else {
       setBaseScore(null);
       setGuardScore(null);
+      setGuardAttempts([]);
     }
     try {
       const res = await fetch("/api/run", {
@@ -117,6 +129,7 @@ export default function Console() {
         if (e.type === "phase") setPhase(e.detail ?? e.phase);
         else if (e.type === "attempt") {
           setAttempts((prev) => [...prev, e]);
+          if (applyGuard) setGuardAttempts((prev) => [...prev, e]);
           queueMicrotask(() => {
             feedRef.current?.scrollTo({
               top: feedRef.current.scrollHeight,
@@ -237,7 +250,12 @@ export default function Console() {
         </div>
 
         {/* Scorecard */}
-        <ScorePanel base={baseScore} guard={guardScore} active={activeScore} />
+        <ScorePanel
+          base={baseScore}
+          guard={guardScore}
+          active={activeScore}
+          guardAttempts={guardAttempts}
+        />
       </div>
     </div>
   );
@@ -275,10 +293,12 @@ function ScorePanel({
   base,
   guard,
   active,
+  guardAttempts,
 }: {
   base: Scorecard | null;
   guard: Scorecard | null;
   active: Scorecard | null;
+  guardAttempts: AttemptEvent[];
 }) {
   return (
     <div className="rounded-xl border border-edge bg-surface p-5">
@@ -307,18 +327,23 @@ function ScorePanel({
               {active.grade}
             </div>
             <div className="pb-1 text-xs text-muted">
-              <div>
-                <span className="text-alert font-semibold">
-                  {active.compromised}
-                </span>{" "}
-                of {active.totalAttempts} probes compromised the target
-              </div>
-              {base && guard && (
+              <div className="text-text">{GRADE_MEANING[active.grade] ?? ""}</div>
+              {base && guard ? (
                 <div className="mt-1 font-mono">
-                  before guard:{" "}
-                  <span className={GRADE_COLOR[base.grade]}>{base.grade}</span> →
-                  after:{" "}
-                  <span className={GRADE_COLOR[guard.grade]}>{guard.grade}</span>
+                  <span className="font-semibold text-alert">
+                    {base.compromised} broke in
+                  </span>
+                  {" → "}
+                  <span className="font-semibold text-signal">
+                    {guard.compromised} after the guard
+                  </span>
+                </div>
+              ) : (
+                <div className="mt-1">
+                  <span className="font-semibold text-alert">
+                    {active.compromised}
+                  </span>{" "}
+                  of {active.totalAttempts} attacks got through
                 </div>
               )}
             </div>
@@ -344,7 +369,39 @@ function ScorePanel({
             ))}
           </ul>
 
-          {active.findings.length > 0 && (
+          {guard && base && base.findings.length > 0 ? (
+            <div className="mt-5 border-t border-edge pt-4">
+              <p className="mb-2 font-mono text-[11px] font-semibold text-muted">
+                WHAT THE GUARD CHANGED
+              </p>
+              <ul className="space-y-2">
+                {base.findings.map((f, i) => {
+                  const after = guardAttempts.find(
+                    (a) => a.attemptId === f.attemptId,
+                  );
+                  const stillBroken = after?.verdict === "compromised";
+                  return (
+                    <li key={i} className="text-xs">
+                      <span className="font-mono text-accent">{f.owaspId}</span>{" "}
+                      <span className="text-text">{f.family}</span>
+                      <div className="mt-0.5 text-muted">
+                        <span className="text-alert">leaked before</span>
+                        {" → "}
+                        {stillBroken ? (
+                          <span className="text-alert">still leaking</span>
+                        ) : (
+                          <span className="text-signal">
+                            {after ? `now ${after.verdict}` : "now blocked"}
+                            {after?.guardReason ? ` · ${after.guardReason}` : ""}
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : active.findings.length > 0 ? (
             <div className="mt-5 border-t border-edge pt-4">
               <p className="mb-2 font-mono text-[11px] font-semibold text-muted">
                 FINDINGS
@@ -359,7 +416,7 @@ function ScorePanel({
                 ))}
               </ul>
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>

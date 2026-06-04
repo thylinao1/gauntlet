@@ -40,6 +40,7 @@ export interface AttackPayload {
 
 /** Confirmed weakness — a probe that compromised the target. */
 export interface Finding {
+  attemptId: string; // correlates a base finding with its guarded outcome
   owaspId: OwaspId;
   title: string;
   severity: Severity;
@@ -89,6 +90,7 @@ export interface AttemptEvent extends RunEventBase {
   verdict: Verdict;
   severity: Severity;
   canaryHit: boolean;
+  guardReason?: string; // why the guard stopped this attempt (guarded runs only)
 }
 
 export interface DoneEvent extends RunEventBase {
