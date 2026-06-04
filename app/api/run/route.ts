@@ -47,6 +47,10 @@ export async function POST(request: Request): Promise<Response> {
     applyGuard: body.applyGuard === true,
     systemPrompt:
       typeof body.systemPrompt === "string" ? body.systemPrompt : undefined,
+    endpointUrl:
+      typeof body.endpointUrl === "string" ? body.endpointUrl : undefined,
+    watchSecret:
+      typeof body.watchSecret === "string" ? body.watchSecret : undefined,
   };
 
   // Live mode calls a real model and costs money. Allow it only when it is configured and the
