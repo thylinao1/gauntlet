@@ -5,6 +5,7 @@
 // on stage). The mock "models" simulate real prompt-injection failure modes offline so the
 // whole demo runs with zero API keys. Swapping in a live target is a drop-in (same interface).
 
+import { lookup } from "node:dns/promises";
 import type { ChatMessage } from "./contract";
 import { chatComplete, hasLlmKey } from "./llm";
 
@@ -333,7 +334,7 @@ function makeEndpointTarget(
       if (!allowLive) {
         return "Bring-your-own endpoints run only in live mode (npm run dev:live).";
       }
-      if (!isSafeEndpoint(url)) {
+      if (!(await isSafeEndpoint(url))) {
         return `Refusing to call an unsafe or non-public URL: ${url || "(none provided)"}.`;
       }
       try {
@@ -355,26 +356,51 @@ function makeEndpointTarget(
 }
 
 // Best-effort SSRF guard: only https (or http to localhost in dev), block private ranges.
-function isSafeEndpoint(url: string): boolean {
+function isPrivateIpv4(ip: string): boolean {
+  return (
+    /^(10\.|192\.168\.|169\.254\.|127\.|0\.)/.test(ip) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(ip)
+  );
+}
+
+function isPrivateIpv6(ip: string): boolean {
+  const s = ip.toLowerCase();
+  if (s === "::1" || s === "::") return true;
+  if (s.startsWith("fe80") || s.startsWith("fc") || s.startsWith("fd")) return true; // link-local / unique-local
+  const mapped = s.match(/::ffff:(\d+\.\d+\.\d+\.\d+)/); // IPv4-mapped IPv6
+  return mapped ? isPrivateIpv4(mapped[1]) : false;
+}
+
+// SSRF guard: only https public hosts (plus localhost for dev). We also RESOLVE the hostname and
+// refuse if it points at a private / loopback / link-local address, which stops a public name that
+// maps to an internal IP. Residual: a rebind between this check and the fetch (TOCTOU) is not
+// closed here; the full fix pins the socket to the resolved IP. Acceptable because the endpoint
+// target is live-gated.
+async function isSafeEndpoint(url: string): Promise<boolean> {
+  let u: URL;
   try {
-    const u = new URL(url);
-    const h = u.hostname.toLowerCase();
-    // Allow localhost only, for local BYO testing.
-    if (h === "localhost" || h === "127.0.0.1") {
-      return u.protocol === "http:" || u.protocol === "https:";
-    }
-    // Everything else must be a public HTTPS host.
-    if (u.protocol !== "https:") return false;
-    if (h.includes(":")) return false; // IPv6 literal (e.g. ::1, fe80:, fc00:)
-    if (h.endsWith(".local") || h.endsWith(".internal")) return false;
-    if (/^(10\.|192\.168\.|169\.254\.|127\.|0\.)/.test(h)) return false;
-    if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return false;
-    // NOTE: a hardened version must resolve the hostname and re-check the resolved IP to defeat
-    // DNS rebinding. Acceptable here because this target only runs when live mode is authorized.
-    return true;
+    u = new URL(url);
   } catch {
     return false;
   }
+  const h = u.hostname.toLowerCase();
+  if (h === "localhost" || h === "127.0.0.1") {
+    return u.protocol === "http:" || u.protocol === "https:";
+  }
+  if (u.protocol !== "https:") return false;
+  if (h.includes(":")) return false; // IPv6 literal
+  if (h.endsWith(".local") || h.endsWith(".internal")) return false;
+  if (isPrivateIpv4(h)) return false; // private IPv4 literal
+  try {
+    const addrs = await lookup(h, { all: true });
+    for (const a of addrs) {
+      if (a.family === 4 && isPrivateIpv4(a.address)) return false;
+      if (a.family === 6 && isPrivateIpv6(a.address)) return false;
+    }
+  } catch {
+    return false; // cannot resolve, refuse
+  }
+  return true;
 }
 
 // Pull a reply string out of common chat-endpoint response shapes.
