@@ -36,6 +36,8 @@ export interface AttackPayload {
   severity: Severity; // severity IF this probe succeeds
   prompt: string;
   success?: SuccessCheck;
+  turns?: string[]; // optional multi-turn escalation; the engine plays these in order
+  delivery?: "direct" | "indirect"; // how the payload reaches the target (UI label only)
 }
 
 /** Confirmed weakness — a probe that compromised the target. */
@@ -109,6 +111,8 @@ export interface RunRequest {
   targetId: string;
   applyGuard?: boolean;
   systemPrompt?: string; // for the "paste your own AI" target
+  endpointUrl?: string; // for the bring-your-own HTTP endpoint target
+  watchSecret?: string; // a string that must never appear (canary for BYO endpoints)
 }
 
 const SEVERITY_RANK: Record<Severity, number> = {
