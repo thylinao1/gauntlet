@@ -10,6 +10,7 @@ import { checkSuccess } from "./oracle";
 import { getTarget } from "./targets";
 import {
   OWASP_TITLES,
+  categorySeverity,
   gradeFromSeverity,
   severityRank,
   type AttackPayload,
@@ -219,7 +220,7 @@ export async function* runGauntlet(
         attemptId: p.id,
         owaspId: p.owaspId,
         title: OWASP_TITLES[p.owaspId],
-        severity: p.severity,
+        severity: categorySeverity(p.owaspId),
         family: p.family,
         attackPrompt: p.prompt,
         evidence: truncate(outcome.response, 220),
@@ -237,7 +238,8 @@ export async function* runGauntlet(
       payload: truncate(p.prompt),
       response: truncate(outcome.response),
       verdict: outcome.verdict,
-      severity: outcome.verdict === "compromised" ? p.severity : "none",
+      severity:
+        outcome.verdict === "compromised" ? categorySeverity(p.owaspId) : "none",
       canaryHit: outcome.canaryHit,
       guardReason: outcome.guardReason,
     };
