@@ -12,6 +12,7 @@
     "test:unit": "vitest run",
     "eval": "tsx scripts/eval.ts",
     "eval:live": "tsx scripts/eval-live.ts",
+    "eval:guard": "tsx scripts/eval-guard.ts",
     "test:e2e": "playwright test",
     "demo:verify": "playwright test tests/e2e/demo.spec.ts"
   },
