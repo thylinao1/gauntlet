@@ -17,8 +17,11 @@ export interface AttackPlan {
   mode: "live" | "seeded";
 }
 
-export async function generateAttacks(target: TargetAdapter): Promise<AttackPlan> {
-  if (process.env.GAUNTLET_LIVE === "true") {
+export async function generateAttacks(
+  target: TargetAdapter,
+  allowLive: boolean,
+): Promise<AttackPlan> {
+  if (allowLive && process.env.GAUNTLET_LIVE === "true") {
     try {
       const live = await generateLivePayloads(target);
       if (live.length >= 3) return { payloads: live, mode: "live" };

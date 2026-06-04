@@ -104,7 +104,10 @@ function scoreRun(
   return { grade, guarded, totalAttempts, compromised, findings, categories };
 }
 
-export async function* runGauntlet(req: RunRequest): AsyncGenerator<RunEvent> {
+export async function* runGauntlet(
+  req: RunRequest,
+  allowLive: boolean,
+): AsyncGenerator<RunEvent> {
   const guarded = req.applyGuard === true;
   const target = getTarget(req.targetId, req.systemPrompt);
 
@@ -116,7 +119,7 @@ export async function* runGauntlet(req: RunRequest): AsyncGenerator<RunEvent> {
   };
   await sleep(ATTEMPT_DELAY_MS);
 
-  const { payloads, mode } = await generateAttacks(target);
+  const { payloads, mode } = await generateAttacks(target, allowLive);
   yield {
     type: "phase",
     ts: Date.now(),
