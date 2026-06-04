@@ -22,6 +22,12 @@ export interface ChatMessage {
   content: string;
 }
 
+/** How the engine decides a probe compromised the target. Defaults to canary detection. */
+export type SuccessCheck =
+  | { kind: "canary" }
+  | { kind: "contains"; needle: string } // an unescaped marker appears in output (LLM05)
+  | { kind: "length"; min: number }; // runaway output length (LLM10)
+
 /** A single adversarial probe the attacker fires at the target. */
 export interface AttackPayload {
   id: string;
@@ -29,6 +35,7 @@ export interface AttackPayload {
   owaspId: OwaspId;
   severity: Severity; // severity IF this probe succeeds
   prompt: string;
+  success?: SuccessCheck;
 }
 
 /** Confirmed weakness — a probe that compromised the target. */

@@ -326,9 +326,10 @@ function ScorePanel({
                   {c.title}
                 </span>
                 <span
-                  className={`font-mono font-semibold uppercase ${SEVERITY_COLOR[c.worst]}`}
+                  className={`font-mono font-semibold uppercase ${c.tested ? SEVERITY_COLOR[c.worst] : "text-muted"}`}
+                  title={c.tested ? undefined : "not tested in this run"}
                 >
-                  {c.worst === "none" ? "pass" : c.worst}
+                  {!c.tested ? "—" : c.worst === "none" ? "pass" : c.worst}
                 </span>
               </li>
             ))}
