@@ -36,7 +36,10 @@ export function checkRateLimit(ip: string): RateResult {
 
 // Number of live (paid) runs allowed before the cap trips. Each run is roughly a couple of cents
 // on Claude Haiku, so the default of 40 keeps total spend around or under two dollars.
-export const LIVE_BUDGET = Math.max(1, Number(process.env.GAUNTLET_LIVE_BUDGET) || 40);
+const parsedBudget = Number(process.env.GAUNTLET_LIVE_BUDGET);
+// 0 is a valid value (a kill switch: always capped), so don't treat it as "unset".
+export const LIVE_BUDGET =
+  Number.isFinite(parsedBudget) && parsedBudget >= 0 ? parsedBudget : 40;
 const COUNTER_KEY = "gauntlet:live:count";
 
 let memLiveCount = 0; // per-instance fallback when Redis is not configured
