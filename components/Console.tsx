@@ -249,6 +249,7 @@ export default function Console() {
           onChange={(e) => setSystemPrompt(e.target.value)}
           disabled={running}
           rows={4}
+          aria-label="Your AI's system prompt"
           placeholder="Paste your AI's system prompt here. Gauntlet plants a secret inside it, then attacks. In live mode (npm run dev:live) it tests a real model."
           className="w-full rounded-lg border border-edge bg-surface p-3 font-mono text-xs leading-relaxed text-text placeholder:text-muted focus:border-accent disabled:opacity-50"
         />
@@ -260,6 +261,7 @@ export default function Console() {
             value={endpointUrl}
             onChange={(e) => setEndpointUrl(e.target.value)}
             disabled={running}
+            aria-label="Your endpoint URL"
             placeholder="https://your-api.example.com/chat"
             className="w-full rounded-lg border border-edge bg-surface p-3 font-mono text-xs text-text placeholder:text-muted focus:border-accent disabled:opacity-50"
           />
@@ -268,6 +270,7 @@ export default function Console() {
             value={watchSecret}
             onChange={(e) => setWatchSecret(e.target.value)}
             disabled={running}
+            aria-label="Watch string that should never leak"
             placeholder="A string that should never leak (e.g. a line from your system prompt)"
             className="w-full rounded-lg border border-edge bg-surface p-3 font-mono text-xs text-text placeholder:text-muted focus:border-accent disabled:opacity-50"
           />
@@ -328,7 +331,8 @@ export default function Console() {
         <p className="-mt-2 font-mono text-[11px] leading-relaxed text-muted">
           <span className="text-accent">measured</span> · oracle false-positive{" "}
           {Math.round(evalReport.oracle.fpRate * 100)}% / false-negative{" "}
-          {Math.round(evalReport.oracle.fnRate * 100)}% on a labeled set ·{" "}
+          {Math.round(evalReport.oracle.fnRate * 100)}% (n={evalReport.oracle.n}{" "}
+          labeled cases) ·{" "}
           {evalReport.targets
             .map((t) => `${t.id} ${t.before.grade}→${t.after.grade}`)
             .join(" · ")}{" "}
