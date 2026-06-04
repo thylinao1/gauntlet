@@ -48,44 +48,60 @@ function pct(n: number, d: number): string {
   return d ? `${((n / d) * 100).toFixed(1)}%` : "n/a";
 }
 
-async function main() {
-  let hFP = 0;
-  let hHit = 0;
-  let cRan = 0;
-  let cFP = 0;
-  let cHit = 0;
-  let combFP = 0;
-  let combHit = 0;
+interface Row {
+  text: string;
+  kind: "benign" | "injection";
+  p: number | null; // P(injection) from the classifier, null if it did not run
+  regex: boolean; // blocked by the regex heuristic
+}
 
-  // Single pass so the classifier runs once per item.
+async function main() {
+  const rows: Row[] = [];
   for (const x of BENIGN) {
-    const h = assessInjection(x).blocked;
     const r = await classifyInjection(x);
-    if (h) hFP += 1;
-    if (r) {
-      cRan += 1;
-      if (r.injection) cFP += 1;
-    }
-    if (h || r?.injection) combFP += 1;
+    rows.push({ text: x, kind: "benign", p: r ? r.confidence : null, regex: assessInjection(x).blocked });
   }
   for (const x of INJECTION) {
-    const h = assessInjection(x).blocked;
     const r = await classifyInjection(x);
-    if (h) hHit += 1;
-    if (r?.injection) cHit += 1;
-    if (h || r?.injection) combHit += 1;
+    rows.push({ text: x, kind: "injection", p: r ? r.confidence : null, regex: assessInjection(x).blocked });
   }
 
-  const B = BENIGN.length;
-  const I = INJECTION.length;
-  console.log(`\n=== GUARD ACCURACY (benign n=${B}, injection n=${I}) ===`);
-  console.log(`regex heuristic    | false positives ${hFP}/${B} (${pct(hFP, B)}) | recall ${hHit}/${I} (${pct(hHit, I)})`);
-  if (cRan > 0) {
-    console.log(`learned classifier | false positives ${cFP}/${B} (${pct(cFP, B)}) | recall ${cHit}/${I} (${pct(cHit, I)})`);
-    console.log(`combined (shipped) | false positives ${combFP}/${B} (${pct(combFP, B)}) | recall ${combHit}/${I} (${pct(combHit, I)})`);
-  } else {
-    console.log("learned classifier | not run (set GAUNTLET_GUARD_BACKEND=transformers)");
+  const benign = rows.filter((r) => r.kind === "benign");
+  const inj = rows.filter((r) => r.kind === "injection");
+  const B = benign.length;
+  const I = inj.length;
+
+  console.log(`\n=== REGEX HEURISTIC (benign n=${B}, injection n=${I}) ===`);
+  console.log(
+    `false positives ${benign.filter((r) => r.regex).length}/${B} | recall ${inj.filter((r) => r.regex).length}/${I}`,
+  );
+
+  if (!rows.some((r) => r.p !== null)) {
+    console.log("\nClassifier not run. Set GAUNTLET_GUARD_BACKEND=transformers to measure it.");
+    return;
   }
+
+  console.log("\n=== CLASSIFIER THRESHOLD SWEEP (lower threshold = more recall, more false positives) ===");
+  console.log("threshold | classifier FP        | classifier recall    | combined recall (regex OR clf)");
+  for (const t of [0.9, 0.7, 0.5, 0.3, 0.2, 0.1]) {
+    const fp = benign.filter((r) => (r.p ?? 0) >= t).length;
+    const rec = inj.filter((r) => (r.p ?? 0) >= t).length;
+    const comb = inj.filter((r) => r.regex || (r.p ?? 0) >= t).length;
+    console.log(
+      `   ${t.toFixed(1)}    |  ${fp}/${B} (${pct(fp, B).padStart(5)})      |  ${rec}/${I} (${pct(rec, I).padStart(5)})      |  ${comb}/${I} (${pct(comb, I).padStart(5)})`,
+    );
+  }
+
+  console.log("\n=== BENIGN by P(injection), desc (top rows are the first to become FALSE POSITIVES) ===");
+  for (const r of [...benign].sort((a, b) => (b.p ?? 0) - (a.p ?? 0))) {
+    console.log(`  ${(r.p ?? 0).toFixed(3)}  ${r.text}`);
+  }
+
+  console.log("\n=== INJECTION by P(injection), asc (bottom rows are FALSE NEGATIVES the classifier misses) ===");
+  for (const r of [...inj].sort((a, b) => (a.p ?? 0) - (b.p ?? 0))) {
+    console.log(`  ${(r.p ?? 0).toFixed(3)}  ${r.regex ? "[regex caught]" : "[regex missed]"}  ${r.text}`);
+  }
+
   console.log(
     "\nThe output guard (canary redaction, markup neutralizing, length cap) is the backstop when an input slips the filter.",
   );
