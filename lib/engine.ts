@@ -4,15 +4,12 @@
 // active, injection inputs are blocked and secrets are redacted from output, so the re-run
 // scores higher (the before/after wow). Mock by default; live LLM attacker is flag-gated.
 
-import {
-  ATTACK_CORPUS,
-} from "./attacks";
-import { getTarget, type TargetAdapter } from "./targets";
+import { generateAttacks } from "./attacker";
+import { getTarget } from "./targets";
 import {
   OWASP_TITLES,
   gradeFromSeverity,
   severityRank,
-  type AttackPayload,
   type CategoryScore,
   type Finding,
   type OwaspId,
@@ -41,11 +38,6 @@ function truncate(s: string, n = 320): string {
 
 function redactCanary(output: string, canary: string): string {
   return output.split(canary).join("[REDACTED-BY-GAUNTLET]");
-}
-
-/** Select the probes to run. Live mode would expand these with model-generated variants. */
-function selectPayloads(_target: TargetAdapter): AttackPayload[] {
-  return ATTACK_CORPUS;
 }
 
 function scoreRun(
@@ -91,7 +83,17 @@ export async function* runGauntlet(req: RunRequest): AsyncGenerator<RunEvent> {
   };
   await sleep(ATTEMPT_DELAY_MS);
 
-  const payloads = selectPayloads(target);
+  const { payloads, mode } = await generateAttacks(target);
+  yield {
+    type: "phase",
+    ts: Date.now(),
+    phase: "plan",
+    detail:
+      mode === "live"
+        ? `Attacker online: ${payloads.length} model-generated, target-aware probes`
+        : `Attacker: ${payloads.length} seeded probes (set GAUNTLET_LIVE=true to generate live)`,
+  };
+  await sleep(ATTEMPT_DELAY_MS);
   const findings: Finding[] = [];
   let compromised = 0;
 
