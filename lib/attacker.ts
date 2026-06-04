@@ -5,6 +5,7 @@
 // failure (no key, bad response, parse error) falls back to the seeded corpus so the demo never breaks.
 
 import { ATTACK_CORPUS } from "./attacks";
+import { chatComplete } from "./llm";
 import type { AttackPayload, OwaspId, Severity } from "./contract";
 import type { TargetAdapter } from "./targets";
 
@@ -41,65 +42,8 @@ Return ONLY a JSON array (no prose, no markdown) of 6-8 objects, each exactly:
 
 async function generateLivePayloads(target: TargetAdapter): Promise<AttackPayload[]> {
   const user = `Target name: ${target.name}\nTarget description: ${target.blurb}\n\nGenerate the attack probes now as a JSON array.`;
-  const raw = await callModel(ATTACKER_BRIEF, user);
+  const raw = await chatComplete(ATTACKER_BRIEF, [{ role: "user", content: user }]);
   return parsePayloads(raw);
-}
-
-// Calls Anthropic (preferred) or OpenAI via fetch — no SDK dependency. Untested without a key;
-// designed so any error throws and the caller falls back to the seeded corpus.
-async function callModel(system: string, user: string): Promise<string> {
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  const openaiKey = process.env.OPENAI_API_KEY;
-
-  if (anthropicKey) {
-    const model = process.env.GAUNTLET_MODEL || "claude-haiku-4-5-20251001";
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 1500,
-        system,
-        messages: [{ role: "user", content: user }],
-      }),
-    });
-    if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
-    const data = (await res.json()) as { content?: Array<{ text?: string }> };
-    const text = (data.content ?? []).map((b) => b?.text ?? "").join("");
-    if (!text) throw new Error("Empty Anthropic response");
-    return text;
-  }
-
-  if (openaiKey) {
-    const model = process.env.GAUNTLET_MODEL || "gpt-4o-mini";
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${openaiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-      }),
-    });
-    if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`);
-    const data = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const text = data.choices?.[0]?.message?.content ?? "";
-    if (!text) throw new Error("Empty OpenAI response");
-    return text;
-  }
-
-  throw new Error("GAUNTLET_LIVE=true but no ANTHROPIC_API_KEY or OPENAI_API_KEY set");
 }
 
 function parsePayloads(raw: string): AttackPayload[] {

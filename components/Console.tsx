@@ -26,6 +26,11 @@ const TARGETS = [
     name: "PolicyBot",
     blurb: "Policy bot guarding a confidential override code.",
   },
+  {
+    id: "live-claude",
+    name: "Live model bot",
+    blurb: "A real LLM under test — needs live mode (npm run dev:live).",
+  },
 ] as const;
 
 const VERDICT_STYLE: Record<Verdict, string> = {
@@ -138,7 +143,7 @@ export default function Console() {
   return (
     <div className="flex flex-col gap-6">
       {/* Controls */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {TARGETS.map((t) => {
           const selected = t.id === targetId;
           return (
