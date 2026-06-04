@@ -358,11 +358,19 @@ function makeEndpointTarget(
 function isSafeEndpoint(url: string): boolean {
   try {
     const u = new URL(url);
-    const local = u.hostname === "localhost" || u.hostname === "127.0.0.1";
-    if (u.protocol !== "https:" && !(u.protocol === "http:" && local)) return false;
-    const h = u.hostname;
-    if (/^(10\.|192\.168\.|169\.254\.|0\.)/.test(h)) return false;
+    const h = u.hostname.toLowerCase();
+    // Allow localhost only, for local BYO testing.
+    if (h === "localhost" || h === "127.0.0.1") {
+      return u.protocol === "http:" || u.protocol === "https:";
+    }
+    // Everything else must be a public HTTPS host.
+    if (u.protocol !== "https:") return false;
+    if (h.includes(":")) return false; // IPv6 literal (e.g. ::1, fe80:, fc00:)
+    if (h.endsWith(".local") || h.endsWith(".internal")) return false;
+    if (/^(10\.|192\.168\.|169\.254\.|127\.|0\.)/.test(h)) return false;
     if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return false;
+    // NOTE: a hardened version must resolve the hostname and re-check the resolved IP to defeat
+    // DNS rebinding. Acceptable here because this target only runs when live mode is authorized.
     return true;
   } catch {
     return false;

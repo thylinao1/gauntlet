@@ -3,6 +3,7 @@
 // shared secret (GAUNTLET_ADMIN_SECRET). Returns 404 when no secret is configured, so the endpoint
 // is invisible unless the owner has set one up.
 //   curl -X POST https://<site>/api/admin/reset -H "x-admin-secret: <secret>"
+// The secret is read from the header only, never from the query string.
 
 import { resetLiveBudget, liveBudgetStatus } from "@/lib/ratelimit";
 
@@ -20,9 +21,8 @@ export async function POST(request: Request): Promise<Response> {
   const secret = process.env.GAUNTLET_ADMIN_SECRET;
   if (!secret) return json({ error: "Reset endpoint is not configured." }, 404);
 
-  const provided =
-    request.headers.get("x-admin-secret") ||
-    new URL(request.url).searchParams.get("secret");
+  // Header only. A secret in a query string would leak into server, proxy, and browser logs.
+  const provided = request.headers.get("x-admin-secret");
   if (provided !== secret) return json({ error: "Unauthorized." }, 401);
 
   await resetLiveBudget();
