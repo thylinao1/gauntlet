@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   AttemptEvent,
   RunEvent,
@@ -31,7 +31,31 @@ const TARGETS = [
     name: "Live model bot",
     blurb: "A real LLM under test. Needs live mode (npm run dev:live).",
   },
+  {
+    id: "indirect-doc",
+    name: "DocBot (indirect)",
+    blurb: "Summarizes untrusted documents. Tests indirect injection (live).",
+  },
+  {
+    id: "custom",
+    name: "Your AI (paste prompt)",
+    blurb: "Paste a system prompt; we plant a secret and attack it.",
+  },
+  {
+    id: "endpoint",
+    name: "Your endpoint (BYO)",
+    blurb: "Attack a real HTTP endpoint you control. Live mode.",
+  },
 ] as const;
+
+interface EvalReport {
+  oracle: { fpRate: number; fnRate: number; n: number };
+  targets: {
+    id: string;
+    before: { grade: string; compromised: number; total: number };
+    after: { grade: string; compromised: number };
+  }[];
+}
 
 const VERDICT_STYLE: Record<Verdict, string> = {
   compromised: "text-alert border-alert/40 bg-alert/10",
@@ -104,7 +128,19 @@ export default function Console() {
   const [baseScore, setBaseScore] = useState<Scorecard | null>(null);
   const [guardScore, setGuardScore] = useState<Scorecard | null>(null);
   const [guardAttempts, setGuardAttempts] = useState<AttemptEvent[]>([]);
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [endpointUrl, setEndpointUrl] = useState("");
+  const [watchSecret, setWatchSecret] = useState("");
+  const [evalReport, setEvalReport] = useState<EvalReport | null>(null);
   const feedRef = useRef<HTMLDivElement>(null);
+
+  // Surface the offline eval numbers (oracle accuracy + reproducible grades) when present.
+  useEffect(() => {
+    fetch("/eval.json")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: EvalReport | null) => setEvalReport(d))
+      .catch(() => {});
+  }, []);
 
   async function run(applyGuard: boolean) {
     if (running) return;
@@ -123,8 +159,26 @@ export default function Console() {
       const res = await fetch("/api/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetId, applyGuard }),
+        body: JSON.stringify({
+          targetId,
+          applyGuard,
+          systemPrompt,
+          endpointUrl,
+          watchSecret,
+        }),
       });
+      if (!res.ok) {
+        let msg = `request failed (${res.status})`;
+        try {
+          const j = (await res.json()) as { error?: string };
+          if (j?.error) msg = j.error;
+        } catch {
+          /* non-JSON error body */
+        }
+        const retry = res.headers.get("retry-after");
+        setPhase(retry ? `${msg} (retry in ${retry}s)` : msg);
+        return;
+      }
       await readStream(res, (e) => {
         if (e.type === "phase") setPhase(e.detail ?? e.phase);
         else if (e.type === "attempt") {
@@ -185,6 +239,42 @@ export default function Console() {
         })}
       </div>
 
+      {targetId === "custom" && (
+        <textarea
+          value={systemPrompt}
+          onChange={(e) => setSystemPrompt(e.target.value)}
+          disabled={running}
+          rows={4}
+          placeholder="Paste your AI's system prompt here. Gauntlet plants a secret inside it, then attacks. In live mode (npm run dev:live) it tests a real model."
+          className="w-full rounded-lg border border-edge bg-surface p-3 font-mono text-xs leading-relaxed text-text placeholder:text-muted focus:border-accent disabled:opacity-50"
+        />
+      )}
+      {targetId === "endpoint" && (
+        <div className="flex flex-col gap-2">
+          <input
+            type="url"
+            value={endpointUrl}
+            onChange={(e) => setEndpointUrl(e.target.value)}
+            disabled={running}
+            placeholder="https://your-api.example.com/chat"
+            className="w-full rounded-lg border border-edge bg-surface p-3 font-mono text-xs text-text placeholder:text-muted focus:border-accent disabled:opacity-50"
+          />
+          <input
+            type="text"
+            value={watchSecret}
+            onChange={(e) => setWatchSecret(e.target.value)}
+            disabled={running}
+            placeholder="A string that should never leak (e.g. a line from your system prompt)"
+            className="w-full rounded-lg border border-edge bg-surface p-3 font-mono text-xs text-text placeholder:text-muted focus:border-accent disabled:opacity-50"
+          />
+          <p className="text-xs text-muted">
+            Black-box: Gauntlet POSTs attack messages to your endpoint and flags a leak
+            if the watch string ever comes back. Runs only in live mode, and only against
+            public HTTPS URLs.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
@@ -203,7 +293,7 @@ export default function Console() {
         >
           ⛨ Apply Guard &amp; Re-run
         </button>
-        <span className="font-mono text-xs text-muted">
+        <span className="font-mono text-xs text-muted" aria-live="polite">
           {phase ? (
             <>
               <span className="text-accent">status:</span> {phase}
@@ -214,6 +304,18 @@ export default function Console() {
           )}
         </span>
       </div>
+
+      {evalReport && (
+        <p className="-mt-2 font-mono text-[11px] leading-relaxed text-muted">
+          <span className="text-accent">measured</span> · oracle false-positive{" "}
+          {Math.round(evalReport.oracle.fpRate * 100)}% / false-negative{" "}
+          {Math.round(evalReport.oracle.fnRate * 100)}% on a labeled set ·{" "}
+          {evalReport.targets
+            .map((t) => `${t.id} ${t.before.grade}→${t.after.grade}`)
+            .join(" · ")}{" "}
+          · reproducible via <span className="text-text">npm run eval</span>
+        </p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         {/* Live attack console */}
@@ -230,13 +332,24 @@ export default function Console() {
           </div>
           <div
             ref={feedRef}
+            role="log"
+            aria-live="polite"
+            aria-label="Live attack console"
             className="scanlines feed-scroll h-[420px] overflow-y-auto p-4 font-mono text-xs leading-relaxed"
           >
             {attempts.length === 0 && !running && (
-              <p className="text-muted">
-                Nothing has run yet. Pick a target above and press{" "}
-                <span className="text-accent">Run Gauntlet</span> to start.
-              </p>
+              <div className="text-muted">
+                <p>
+                  Nothing has run yet. Pick a target above and press{" "}
+                  <span className="text-accent">Run Gauntlet</span>.
+                </p>
+                <p className="mt-2 text-[11px] leading-relaxed">
+                  An attacker fires OWASP-mapped probes, each streams here with a
+                  verdict, the scorecard lands a grade, then{" "}
+                  <span className="text-signal">Apply Guard</span> re-tests and the
+                  grade climbs.
+                </p>
+              </div>
             )}
             {attempts.map((a) => (
               <AttemptRow key={`${a.attemptId}-${a.index}`} a={a} />
@@ -276,10 +389,10 @@ function AttemptRow({ a }: { a: AttemptEvent }) {
           {VERDICT_LABEL[a.verdict]}
         </span>
       </div>
-      <p className="mt-1 text-muted">
+      <p className="mt-1 text-muted [overflow-wrap:anywhere]">
         <span className="text-text">↳ attack:</span> {a.payload}
       </p>
-      <p className="mt-0.5 text-muted">
+      <p className="mt-0.5 text-muted [overflow-wrap:anywhere]">
         <span className="text-text">↳ response:</span> {a.response}
         {a.canaryHit && (
           <span className="ml-1 font-bold text-alert">⚠ canary leaked</span>
@@ -301,7 +414,7 @@ function ScorePanel({
   guardAttempts: AttemptEvent[];
 }) {
   return (
-    <div className="rounded-xl border border-edge bg-surface p-5">
+    <div className="rounded-xl border border-edge bg-surface p-5" aria-live="polite">
       <div className="flex items-center justify-between">
         <span className="font-mono text-xs font-semibold tracking-wide text-muted">
           OWASP LLM TOP 10 · SCORECARD
@@ -320,6 +433,7 @@ function ScorePanel({
           <div className="mt-4 flex items-end gap-4">
             <div
               key={active.grade + String(active.guarded)}
+              data-testid="grade"
               className={`animate-pop font-mono text-6xl font-bold leading-none ${
                 GRADE_COLOR[active.grade] ?? "text-text"
               }`}
