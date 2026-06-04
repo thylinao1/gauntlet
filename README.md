@@ -56,18 +56,22 @@ npm run build        # production build
 
 No environment variables are needed for the demo — it runs offline.
 
-### Optional: live LLM attacker (next workstream)
+### Live LLM attacker
 
-The engine ships with a seeded attack corpus (`lib/attacks.ts`). The seam for a **model-generated,
-app-specific** attacker is in place (`selectPayloads` in `lib/engine.ts`). To wire it:
+A **black-box, model-generated** attacker (`lib/attacker.ts`) writes app-specific probes from only
+the target's public name + description — so a successful hit is genuine discovery, not cheating.
+Enable it:
 
 ```bash
 # .env.local
 GAUNTLET_LIVE=true
-ANTHROPIC_API_KEY=sk-ant-...      # or OPENAI_API_KEY
+ANTHROPIC_API_KEY=sk-ant-...                 # or OPENAI_API_KEY
+# GAUNTLET_MODEL=claude-haiku-4-5-20251001   # optional model override
 ```
 
-Live generation is not yet implemented — the offline demo is the source of truth today.
+Then run **`npm run dev:live`** (it force-loads `.env.local`, since some shells export an empty
+`ANTHROPIC_API_KEY` that would otherwise shadow it). On any error — missing key, bad response,
+parse failure — it falls back to the offline seeded corpus, so the demo never breaks.
 
 ## Stack
 
