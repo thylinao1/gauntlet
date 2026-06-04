@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:live": "sh -c 'set -a; . ./.env.local; set +a; exec next dev'",
+    "dev:live": "sh -c 'set -a; . ./.env.local; set +a; unset HF_TOKEN HUGGINGFACE_HUB_TOKEN HUGGING_FACE_HUB_TOKEN HF_HUB_TOKEN; exec next dev'",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
