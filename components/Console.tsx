@@ -309,6 +309,21 @@ export default function Console() {
         </span>
       </div>
 
+      <p className="rounded-lg border border-edge bg-surface px-4 py-3 text-xs leading-relaxed text-muted">
+        This public demo replays a{" "}
+        <span className="text-text">deterministic, recorded attack set</span>, so anyone
+        can run the exact scan for free. The full version generates a{" "}
+        <span className="text-text">live, model-generated attacker on the real Claude API</span>.
+        To run it live yourself, email{" "}
+        <a
+          className="text-accent underline underline-offset-2"
+          href="mailto:mthylinao@gmail.com"
+        >
+          mthylinao@gmail.com
+        </a>
+        .
+      </p>
+
       {evalReport && (
         <p className="-mt-2 font-mono text-[11px] leading-relaxed text-muted">
           <span className="text-accent">measured</span> · oracle false-positive{" "}

@@ -32,7 +32,15 @@ export default function Home() {
         <p>
           The demo runs offline against bundled, deliberately vulnerable bots with
           planted secrets. Gauntlet lowers the risks that are easiest to exploit.
-          It does not make any AI &ldquo;100% safe.&rdquo;{" "}
+          It does not make any AI &ldquo;100% safe.&rdquo; The full version runs a live,
+          model-generated attacker on the real Claude API; email{" "}
+          <a
+            className="text-accent underline underline-offset-2"
+            href="mailto:mthylinao@gmail.com"
+          >
+            mthylinao@gmail.com
+          </a>{" "}
+          to try it live.{" "}
           <span className="text-text">Beyond Tomorrow Hackathon</span>. Next.js.
           OWASP LLM Top 10 (2025).
         </p>
