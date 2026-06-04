@@ -226,8 +226,8 @@ function makeLiveClaudeTarget(): TargetAdapter {
     systemPrompt,
     respond: async (messages) => {
       const u = lastUser(messages);
-      const generic = genericVulnResponse(u);
-      if (generic) return generic;
+      // The live target is a genuine test of the real model. No scripted shortcuts here, so
+      // every probe goes to the model and a refusal stays a refusal.
       if (hasLlmKey()) {
         try {
           const convo = messages
