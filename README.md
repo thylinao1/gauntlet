@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gauntlet — autonomous AI red-team
 
-## Getting Started
+**Throw your AI in. See what survives.**
 
-First, run the development server:
+Gauntlet is an autonomous agent that attacks your AI app the way a real attacker would —
+prompt injection, jailbreaks, system-prompt leakage, tool abuse — then scores it against the
+**OWASP LLM Top 10 (2025)** and hands you a one-click runtime guard. Prompt injection is the
+#1 LLM risk, and most teams ship AI features with zero adversarial testing.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+> Built for the **Beyond Tomorrow Hackathon**. The demo runs fully offline against bundled,
+> deliberately-vulnerable targets — no API keys required.
+
+## The wow, in 90 seconds
+
+1. Pick a target (a bundled vulnerable bot, or paste your own system prompt).
+2. Hit **Run Gauntlet**. An autonomous attacker fires OWASP-mapped probes; each attempt streams
+   live into the Attack Console with a verdict.
+3. The target leaks its hidden system prompt and a planted secret. The scorecard snaps to **F**.
+4. Hit **Apply Guard & Re-run**. A runtime guard blocks the injections and redacts secrets — the
+   score climbs to **A**, live. Before → after, on the real app.
+
+## How it works
+
+A streaming, multi-stage agent loop (`lib/engine.ts`), surfaced over Server-Sent Events:
+
+```mermaid
+flowchart LR
+  U["Pick target / paste system prompt"] --> API["POST /api/run — SSE"]
+  API --> ENG["runGauntlet engine"]
+  ENG --> PLAN["Planner: select OWASP attack families"]
+  PLAN --> ATT["Attacker: seed + (live) generate probes"]
+  ATT --> TA["TargetAdapter.respond()"]
+  TA --> JUDGE["Judge: canary oracle"]
+  JUDGE -->|compromised / safe / blocked| ENG
+  ENG --> SCORE["Scorer: OWASP LLM Top 10 grade"]
+  ENG -. applyGuard .-> GUARD["Guard: injection filter + secret redaction"]
+  GUARD --> TA
+  ENG ==>|stream events| UI["Attack Console + Scorecard"]
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Deterministic compromise detection.** Each target plants a **canary** secret; an attack
+  "succeeds" only if the canary appears in the output. No flaky LLM-judge guesswork on stage.
+- **Black-box, OWASP-mapped.** Tests LLM01 (prompt injection), LLM02 (sensitive info disclosure),
+  LLM06 (excessive agency), LLM07 (system-prompt leakage). LLM05/LLM10 and training-time risks
+  (LLM03/04/08) are on the roadmap.
+- **The guard is a real (basic) defense:** a pattern-based input firewall + output secret
+  redaction + tool allow-list. It is honest risk-reduction, not a "100% safe" claim.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Run it
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev          # http://localhost:3000  (or PORT=3210 npm run dev)
+npm run build        # production build
+```
 
-## Learn More
+No environment variables are needed for the demo — it runs offline.
 
-To learn more about Next.js, take a look at the following resources:
+### Optional: live LLM attacker (next workstream)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The engine ships with a seeded attack corpus (`lib/attacks.ts`). The seam for a **model-generated,
+app-specific** attacker is in place (`selectPayloads` in `lib/engine.ts`). To wire it:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# .env.local
+GAUNTLET_LIVE=true
+ANTHROPIC_API_KEY=sk-ant-...      # or OPENAI_API_KEY
+```
 
-## Deploy on Vercel
+Live generation is not yet implemented — the offline demo is the source of truth today.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Next.js 16 (App Router, route handlers, streaming) · React 19 · TypeScript · Tailwind v4 ·
+deploy target Vercel · persistence target Supabase (planned).
+
+## Project layout
+
+```
+app/
+  page.tsx              hero + console
+  api/run/route.ts      SSE endpoint streaming the run
+components/Console.tsx  live attack console + OWASP scorecard (client)
+lib/
+  contract.ts           shared types (the interface contract)
+  attacks.ts            seed attack corpus, OWASP-tagged
+  targets.ts            bundled vulnerable demo targets + canaries
+  engine.ts             the red-team loop + scorer + guard
+docs/                   SPEC, CONTRACT, architecture
+```
+
+See [`docs/architecture.md`](docs/architecture.md) and [`docs/CONTRACT.md`](docs/CONTRACT.md).
