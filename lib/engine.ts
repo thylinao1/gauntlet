@@ -170,7 +170,11 @@ async function executeProbe(
 export async function* runGauntlet(
   req: RunRequest,
   allowLive: boolean,
+  notice?: string,
 ): AsyncGenerator<RunEvent> {
+  if (notice) {
+    yield { type: "notice", ts: Date.now(), level: "budget", message: notice };
+  }
   const guarded = req.applyGuard === true;
   const target = getTarget(req.targetId, {
     systemPrompt: req.systemPrompt,

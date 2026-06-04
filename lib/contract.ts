@@ -105,7 +105,19 @@ export interface ErrorEvent extends RunEventBase {
   message: string;
 }
 
-export type RunEvent = PhaseEvent | AttemptEvent | DoneEvent | ErrorEvent;
+// A non-error message surfaced to the UI (e.g. the live-budget cap was reached). Not a failure.
+export interface NoticeEvent extends RunEventBase {
+  type: "notice";
+  level: "info" | "budget";
+  message: string;
+}
+
+export type RunEvent =
+  | PhaseEvent
+  | AttemptEvent
+  | DoneEvent
+  | ErrorEvent
+  | NoticeEvent;
 
 export interface RunRequest {
   targetId: string;

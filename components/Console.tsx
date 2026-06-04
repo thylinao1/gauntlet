@@ -132,6 +132,7 @@ export default function Console() {
   const [endpointUrl, setEndpointUrl] = useState("");
   const [watchSecret, setWatchSecret] = useState("");
   const [evalReport, setEvalReport] = useState<EvalReport | null>(null);
+  const [notice, setNotice] = useState<string>("");
   const feedRef = useRef<HTMLDivElement>(null);
 
   // Surface the offline eval numbers (oracle accuracy + reproducible grades) when present.
@@ -147,6 +148,7 @@ export default function Console() {
     setRunning(true);
     setPhase("connecting…");
     setAttempts([]);
+    setNotice("");
     if (applyGuard) {
       setGuardScore(null);
       setGuardAttempts([]);
@@ -194,6 +196,8 @@ export default function Console() {
           if (applyGuard) setGuardScore(e.scorecard);
           else setBaseScore(e.scorecard);
           setPhase(applyGuard ? "guard verified" : "scan complete");
+        } else if (e.type === "notice") {
+          setNotice(e.message);
         } else if (e.type === "error") {
           setPhase(`error: ${e.message}`);
         }
@@ -315,6 +319,15 @@ export default function Console() {
             .join(" · ")}{" "}
           · reproducible via <span className="text-text">npm run eval</span>
         </p>
+      )}
+
+      {notice && (
+        <div
+          role="status"
+          className="rounded-lg border border-warn/40 bg-warn/10 px-4 py-3 text-sm leading-relaxed text-warn"
+        >
+          <span className="font-semibold">Live budget reached.</span> {notice}
+        </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">

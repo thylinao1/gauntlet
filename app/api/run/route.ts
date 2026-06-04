@@ -7,13 +7,23 @@ import { runGauntlet } from "@/lib/engine";
 import { hasLlmKey } from "@/lib/llm";
 import {
   checkRateLimit,
-  liveBudgetAvailable,
+  liveBudgetStatus,
   recordLiveRun,
 } from "@/lib/ratelimit";
 import type { RunRequest } from "@/lib/contract";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+// Friendly, non-error message shown when the global live-spend cap is reached.
+function budgetNotice(): string {
+  const contact = process.env.GAUNTLET_OWNER_CONTACT?.trim();
+  const base =
+    "Live mode is paused for now. The site owner set a spending cap on the API key so this public demo can never run up a bill, and that cap has been reached. The scan below still runs on the deterministic seeded attack corpus.";
+  return contact
+    ? `${base} Want to try the live attacker yourself? Message the owner at ${contact} and they'll reset the limit for you.`
+    : `${base} Want to try the live attacker yourself? Message the site owner and they'll reset the limit for you.`;
+}
 
 export async function POST(request: Request): Promise<Response> {
   const ip =
@@ -54,15 +64,18 @@ export async function POST(request: Request): Promise<Response> {
   };
 
   // Live mode calls a real model and costs money. Allow it only when it is configured and the
-  // hourly budget still has room; otherwise the run falls back to the seeded corpus.
+  // global spending budget still has room; otherwise fall back to the seeded corpus and tell the
+  // user why with a friendly notice (not an error).
   let allowLive = false;
-  if (
-    process.env.GAUNTLET_LIVE === "true" &&
-    hasLlmKey() &&
-    liveBudgetAvailable()
-  ) {
-    allowLive = true;
-    recordLiveRun();
+  let notice: string | undefined;
+  if (process.env.GAUNTLET_LIVE === "true" && hasLlmKey()) {
+    const status = await liveBudgetStatus();
+    if (status.available) {
+      allowLive = true;
+      await recordLiveRun();
+    } else {
+      notice = budgetNotice();
+    }
   }
 
   const encoder = new TextEncoder();
@@ -71,7 +84,7 @@ export async function POST(request: Request): Promise<Response> {
       const send = (event: unknown) =>
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
       try {
-        for await (const event of runGauntlet(req, allowLive)) {
+        for await (const event of runGauntlet(req, allowLive, notice)) {
           send(event);
         }
       } catch (err) {
