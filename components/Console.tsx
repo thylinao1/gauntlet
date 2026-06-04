@@ -29,7 +29,7 @@ const TARGETS = [
   {
     id: "live-claude",
     name: "Live model bot",
-    blurb: "A real LLM under test — needs live mode (npm run dev:live).",
+    blurb: "A real LLM under test. Needs live mode (npm run dev:live).",
   },
 ] as const;
 
@@ -152,15 +152,15 @@ export default function Console() {
               type="button"
               disabled={running}
               onClick={() => setTargetId(t.id)}
-              className={`rounded-lg border p-4 text-left transition-colors disabled:opacity-50 ${
+              className={`rounded-lg border p-4 text-left transition-all duration-200 ease-out hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50 ${
                 selected
-                  ? "border-accent bg-accent/10"
-                  : "border-edge bg-surface hover:border-muted"
+                  ? "border-accent bg-accent/10 shadow-md shadow-accent/10 ring-1 ring-accent/40"
+                  : "border-edge bg-surface hover:border-muted hover:bg-elevated"
               }`}
             >
               <div className="flex items-center gap-2">
                 <span
-                  className={`h-2 w-2 rounded-full ${
+                  className={`h-2 w-2 rounded-full transition-colors duration-200 ${
                     selected ? "bg-accent" : "bg-edge"
                   }`}
                 />
@@ -177,7 +177,7 @@ export default function Console() {
           type="button"
           onClick={() => run(false)}
           disabled={running}
-          className="rounded-md bg-accent px-5 py-2.5 font-mono text-sm font-semibold text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="rounded-md bg-accent px-5 py-2.5 font-mono text-sm font-semibold text-ink shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md hover:shadow-accent/20 active:translate-y-0 active:scale-[0.98] disabled:translate-y-0 disabled:opacity-50 disabled:shadow-none"
         >
           {running && !guardScore ? "Running Gauntlet…" : "▶ Run Gauntlet"}
         </button>
@@ -185,7 +185,7 @@ export default function Console() {
           type="button"
           onClick={() => run(true)}
           disabled={running || !baseScore}
-          className="rounded-md border border-signal/50 bg-signal/10 px-5 py-2.5 font-mono text-sm font-semibold text-signal transition-colors hover:bg-signal/20 disabled:opacity-40"
+          className="rounded-md border border-signal/50 bg-signal/10 px-5 py-2.5 font-mono text-sm font-semibold text-signal transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-signal/20 active:translate-y-0 active:scale-[0.98] disabled:translate-y-0 disabled:opacity-40"
           title={baseScore ? "Apply runtime guard and re-test" : "Run a scan first"}
         >
           ⛨ Apply Guard &amp; Re-run
@@ -197,7 +197,7 @@ export default function Console() {
               {running && <span className="cursor-blink"> ▋</span>}
             </>
           ) : (
-            "idle — select a target and run"
+            "idle. select a target and run"
           )}
         </span>
       </div>
@@ -217,12 +217,12 @@ export default function Console() {
           </div>
           <div
             ref={feedRef}
-            className="scanlines h-[420px] overflow-y-auto p-4 font-mono text-xs leading-relaxed"
+            className="scanlines feed-scroll h-[420px] overflow-y-auto p-4 font-mono text-xs leading-relaxed"
           >
             {attempts.length === 0 && !running && (
               <p className="text-muted">
-                No run yet. Hit <span className="text-accent">Run Gauntlet</span>{" "}
-                to launch an autonomous adversarial scan.
+                Nothing has run yet. Pick a target above and press{" "}
+                <span className="text-accent">Run Gauntlet</span> to start.
               </p>
             )}
             {attempts.map((a) => (
@@ -245,7 +245,7 @@ export default function Console() {
 
 function AttemptRow({ a }: { a: AttemptEvent }) {
   return (
-    <div className="mb-3 border-l-2 border-edge pl-3">
+    <div className="animate-row mb-3 border-l-2 border-edge pl-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-muted">[{String(a.index).padStart(2, "0")}]</span>
         <span className="rounded border border-accent/40 bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
@@ -284,7 +284,7 @@ function ScorePanel({
     <div className="rounded-xl border border-edge bg-surface p-5">
       <div className="flex items-center justify-between">
         <span className="font-mono text-xs font-semibold tracking-wide text-muted">
-          OWASP LLM TOP 10 — SCORECARD
+          OWASP LLM TOP 10 · SCORECARD
         </span>
       </div>
 
@@ -293,10 +293,14 @@ function ScorePanel({
           Awaiting scan results…
         </p>
       ) : (
-        <>
+        <div
+          key={(active.guarded ? "g" : "b") + active.totalAttempts}
+          className="animate-panel"
+        >
           <div className="mt-4 flex items-end gap-4">
             <div
-              className={`font-mono text-6xl font-bold leading-none ${
+              key={active.grade + String(active.guarded)}
+              className={`animate-pop font-mono text-6xl font-bold leading-none ${
                 GRADE_COLOR[active.grade] ?? "text-text"
               }`}
             >
@@ -312,8 +316,8 @@ function ScorePanel({
               {base && guard && (
                 <div className="mt-1 font-mono">
                   before guard:{" "}
-                  <span className={GRADE_COLOR[base.grade]}>{base.grade}</span>{" "}
-                  → after:{" "}
+                  <span className={GRADE_COLOR[base.grade]}>{base.grade}</span> →
+                  after:{" "}
                   <span className={GRADE_COLOR[guard.grade]}>{guard.grade}</span>
                 </div>
               )}
@@ -350,13 +354,13 @@ function ScorePanel({
                   <li key={i} className="text-xs">
                     <span className="font-mono text-alert">{f.owaspId}</span>{" "}
                     <span className="text-text">{f.title}</span>
-                    <span className="text-muted"> — {f.family}</span>
+                    <span className="text-muted"> · {f.family}</span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

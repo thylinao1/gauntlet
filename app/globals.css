@@ -63,3 +63,118 @@ body {
     animation: none;
   }
 }
+
+/* ---- motion system ---- */
+:root {
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  60% {
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes glow {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-row {
+  animation: fade-in-up 0.32s var(--ease-out-expo) both;
+}
+.animate-pop {
+  animation: pop-in 0.42s var(--ease-out-expo) both;
+}
+.animate-panel {
+  animation: panel-in 0.4s var(--ease-out-expo) both;
+}
+
+/* ambient depth behind the hero */
+.hero-glow {
+  position: absolute;
+  inset: -25% 0 auto 0;
+  height: 520px;
+  z-index: -1;
+  pointer-events: none;
+  filter: blur(24px);
+  background:
+    radial-gradient(
+      40% 62% at 16% 0%,
+      color-mix(in oklch, var(--color-accent) 28%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      38% 58% at 84% 6%,
+      color-mix(in oklch, var(--color-alert) 20%, transparent),
+      transparent 72%
+    );
+  animation: glow 9s ease-in-out infinite;
+}
+
+/* smooth, quiet scrollbar for the console feed */
+.feed-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-edge) transparent;
+}
+.feed-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.feed-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.feed-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-edge);
+  border-radius: 8px;
+}
+.feed-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
+}
+
+/* visible, on-brand focus rings */
+:where(button, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-row,
+  .animate-pop,
+  .animate-panel,
+  .hero-glow {
+    animation: none !important;
+  }
+}
