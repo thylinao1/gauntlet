@@ -14,9 +14,13 @@ prompt or exfiltrated user record is a real, current, expensive failure.
 - C3: Detect compromise deterministically via a planted **canary** (no false positives on stage).
 - C4: Produce an OWASP LLM Top 10 scorecard with a letter grade + per-category severity + findings.
 - C5: "Apply Guard" measurably raises the grade on re-run (before/after delta shown).
+- C6: Cover multi-turn escalation and indirect injection (payload inside a processed document).
+- C7: Measure the oracle's false-positive / false-negative rate and publish reproducible grades.
 
-**Status (skeleton):** C1 ✅ (7 probes, 4 categories) · C2 ✅ (SSE) · C3 ✅ (canary oracle) ·
-C4 ✅ (grade + categories + findings) · C5 ✅ (F→A on SupportBot, verified).
+**Status (current):** C1 ✅ (13 probes, 6 categories: LLM01/02/05/06/07/10) · C2 ✅ (SSE) ·
+C3 ✅ (canary oracle, refusal-gated) · C4 ✅ (grade + categories + findings + per-attack remediation) ·
+C5 ✅ (F→A reproducible: SupportBot 10/13, DevAssistant 5/13, PolicyBot 9/13, all → A) ·
+C6 ✅ (multi-turn + indirect injection) · C7 ✅ (oracle FP 0% / FN 20% on a labeled set, `npm run eval`).
 
 ## Constraints
 House stack (Next.js + Vercel + Supabase + OpenAI/Claude); ~1 week build (⚠ verify deadline —
@@ -26,8 +30,8 @@ architecture, state the problem first, list the stack).
 
 ## Non-goals (what we deliberately will NOT build)
 Not a hardened security product. Not training-time attacks (LLM03/04/08). Not multi-tenant
-auth. Not a shippable guard SDK. No "100% safe" claims. BYO-live-endpoint adapter is a stretch,
-not the demo spine.
+auth. Not a shippable guard SDK. No "100% safe" claims. The BYO HTTP-endpoint adapter now exists
+but is live-gated and SSRF-guarded; it is a flex, not the demo spine.
 
 ## Success signal (how a judge sees it worked)
 A judge picks SupportBot, clicks Run, watches it leak a customer SSN live, sees the score hit
