@@ -52,18 +52,19 @@ interface Row {
   text: string;
   kind: "benign" | "injection";
   p: number | null; // P(injection) from the classifier, null if it did not run
+  decision: boolean; // the classifier's own block/allow call (works for any backend)
   regex: boolean; // blocked by the regex heuristic
 }
 
 async function main() {
   const rows: Row[] = [];
   for (const x of BENIGN) {
-    const r = await classifyInjection(x);
-    rows.push({ text: x, kind: "benign", p: r ? r.confidence : null, regex: assessInjection(x).blocked });
+    const r = await classifyInjection(x, true);
+    rows.push({ text: x, kind: "benign", p: r ? r.confidence : null, decision: r?.injection ?? false, regex: assessInjection(x).blocked });
   }
   for (const x of INJECTION) {
-    const r = await classifyInjection(x);
-    rows.push({ text: x, kind: "injection", p: r ? r.confidence : null, regex: assessInjection(x).blocked });
+    const r = await classifyInjection(x, true);
+    rows.push({ text: x, kind: "injection", p: r ? r.confidence : null, decision: r?.injection ?? false, regex: assessInjection(x).blocked });
   }
 
   const benign = rows.filter((r) => r.kind === "benign");
@@ -75,6 +76,17 @@ async function main() {
   console.log(
     `false positives ${benign.filter((r) => r.regex).length}/${B} | recall ${inj.filter((r) => r.regex).length}/${I}`,
   );
+
+  const ran = rows.some((r) => r.p !== null);
+  if (ran) {
+    const cFP = benign.filter((r) => r.decision).length;
+    const cRec = inj.filter((r) => r.decision).length;
+    const combRec = inj.filter((r) => r.decision || r.regex).length;
+    console.log(`\n=== CLASSIFIER DECISION (its own call; model = ${process.env.GAUNTLET_GUARD_BACKEND === "transformers" ? process.env.GAUNTLET_GUARD_MODEL || "deberta default" : "LLM judge"}) ===`);
+    console.log(
+      `false positives ${cFP}/${B} (${pct(cFP, B)}) | recall ${cRec}/${I} (${pct(cRec, I)}) | combined with regex ${combRec}/${I} (${pct(combRec, I)})`,
+    );
+  }
 
   if (!rows.some((r) => r.p !== null)) {
     console.log("\nClassifier not run. Set GAUNTLET_GUARD_BACKEND=transformers to measure it.");
