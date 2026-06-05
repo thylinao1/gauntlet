@@ -14,9 +14,10 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-      # Skip the optional, heavy transformers classifier dep; it is not needed to typecheck,
-      # lint, test, or build (its import is runtime-only and bundler-ignored).
-      - run: npm ci --omit=optional
+      # Full install. Do NOT use --omit=optional here: it also drops Rollup's platform binary
+      # (@rollup/rollup-linux-x64-gnu) that vitest/vite needs. The optional transformers classifier
+      # is allowed to install; if it ever fails it is non-fatal (optionalDependencies).
+      - run: npm ci
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm test
