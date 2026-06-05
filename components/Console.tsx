@@ -29,12 +29,12 @@ const TARGETS = [
   {
     id: "live-claude",
     name: "Live model bot",
-    blurb: "A real LLM under test. Needs live mode (npm run dev:live).",
+    blurb: "A model under a naive secret-keeping prompt. It holds and refuses.",
   },
   {
     id: "indirect-doc",
     name: "DocBot (indirect)",
-    blurb: "Summarizes untrusted documents. Tests indirect injection (live).",
+    blurb: "Summarizes untrusted documents. Tests indirect injection.",
   },
   {
     id: "custom",
@@ -313,10 +313,12 @@ export default function Console() {
       </div>
 
       <p className="rounded-lg border border-edge bg-surface px-4 py-3 text-xs leading-relaxed text-muted">
-        This runs a{" "}
-        <span className="text-text">live, model-generated attacker on the real Claude API</span>, so
-        each run is different. It is capped so the public demo stays free; when the cap is reached it
-        falls back to a recorded run and says so. To lift the cap, email{" "}
+        This public demo runs{" "}
+        <span className="text-text">deterministically</span>, with a seeded attacker and a
+        reproduced model run, so it is free and calls no paid API. The before-and-after is the same
+        every time and reproducible with <span className="text-text">npm run eval</span>. To run it
+        live against a real model, clone the repo and run{" "}
+        <span className="text-text">npm run dev:live</span>, or email{" "}
         <a
           className="text-accent underline underline-offset-2"
           href="mailto:mthylinao@gmail.com"

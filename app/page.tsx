@@ -30,17 +30,18 @@ export default function Home() {
 
       <footer className="mt-12 border-t border-edge pt-5 font-mono text-xs text-muted">
         <p>
-          Gauntlet attacks bundled, deliberately vulnerable bots (and a real model in live
-          mode) that hold planted secrets, and lowers the risks that are easiest to exploit.
-          It does not make any AI &ldquo;100% safe.&rdquo; The public demo runs a live,
-          model-generated attacker on the real Claude API, capped so it stays free; email{" "}
+          Gauntlet attacks bundled, deliberately vulnerable bots and a model under a naive
+          secret-keeping prompt, and lowers the risks that are easiest to exploit. It does not
+          make any AI &ldquo;100% safe.&rdquo; The public demo runs deterministically, so it is
+          free and calls no paid API. To run it live against a real model, clone the repo and run{" "}
+          <span className="text-text">npm run dev:live</span>, or email{" "}
           <a
             className="text-accent underline underline-offset-2"
             href="mailto:mthylinao@gmail.com"
           >
             mthylinao@gmail.com
-          </a>{" "}
-          to lift the cap.{" "}
+          </a>
+          .{" "}
           <span className="text-text">Beyond Tomorrow Hackathon</span>. Next.js.
           OWASP LLM Top 10 (2025).
         </p>
