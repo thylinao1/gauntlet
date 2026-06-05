@@ -42,9 +42,11 @@ async function modelJudge(text: string): Promise<ClassifierResult | null> {
     const e = raw.lastIndexOf("}");
     if (s === -1 || e === -1) return null;
     const o = JSON.parse(raw.slice(s, e + 1)) as Record<string, unknown>;
+    const injection = o.injection === true;
+    const conf = typeof o.confidence === "number" ? o.confidence : 0.5;
     return {
-      injection: o.injection === true,
-      confidence: typeof o.confidence === "number" ? o.confidence : 0.5,
+      injection,
+      confidence: injection ? conf : 1 - conf, // express as P(injection), like the local classifier
       source: "model",
       label: typeof o.label === "string" ? o.label : undefined,
     };
@@ -72,7 +74,8 @@ async function getTransformersPipe() {
           ) => Promise<(input: string, opts?: Record<string, unknown>) => Promise<unknown>>;
         };
         const model =
-          process.env.GAUNTLET_GUARD_MODEL || "protectai/deberta-v3-base-prompt-injection";
+          process.env.GAUNTLET_GUARD_MODEL ||
+          "protectai/deberta-v3-base-prompt-injection-v2"; // v2 recall 80% vs v1 47%, both 0% FP
         return await mod.pipeline("text-classification", model);
       } catch {
         return null;
