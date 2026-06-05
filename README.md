@@ -74,11 +74,11 @@ Numbers the demo can stand behind, not adjectives. Regenerate with `npm run eval
   **conflicting-instruction** prompts (keep-confidential plus always-be-transparent), about 1 in 6.
   The honest takeaway: a current frontier model resists these attacks, and the real exposure is in
   prompt misconfiguration, which is exactly what Gauntlet surfaces for your app.
-- **Guard accuracy** on a 15-benign / 15-injection labeled set (`npm run eval:guard`): **0% false
-  positives** (the guard does not block real users), with combined input-blocking recall of **60%**
-  (regex 53%, learned classifier 47%, the two are complementary). The output guard (canary redaction)
-  is the backstop when an input slips the filter. Small self-authored set, so treat recall as
-  indicative.
+- **Guard accuracy** on a 15-benign / 15-injection labeled set (`npm run eval:guard`), all at **0%
+  false positives** (the guard never blocks a real user): the regex catches 53%, the local deberta-v2
+  classifier **80%** (combined 87%), and the LLM-judge that runs on live guarded runs catches **93%**.
+  The output guard (canary redaction) is the backstop when an input slips the filter. Small
+  self-authored set, so treat recall as indicative.
 - **Web performance** (Lighthouse on the deployed site, headless Chrome, one lab run): Performance
   **96**, Accessibility **100**, Best Practices **100**, SEO **100**; LCP 2.3s, CLS 0, TBT 60ms, FCP
   1.3s. These are lab single-run numbers, not field data.
