@@ -328,10 +328,7 @@ export default function Console() {
 
       {evalReport && (
         <p className="-mt-2 font-mono text-[11px] leading-relaxed text-muted">
-          <span className="text-accent">measured</span> · oracle false-positive{" "}
-          {Math.round(evalReport.oracle.fpRate * 100)}% / false-negative{" "}
-          {Math.round(evalReport.oracle.fnRate * 100)}% (n={evalReport.oracle.n}{" "}
-          labeled cases) ·{" "}
+          <span className="text-accent">measured</span> ·{" "}
           {evalReport.targets
             .map((t) => `${t.id} ${t.before.grade}→${t.after.grade}`)
             .join(" · ")}{" "}
