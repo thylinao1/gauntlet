@@ -46,3 +46,7 @@ next-env.d.ts
 # transformers.js local model cache
 .cache
 /_tfproof.mjs
+NOTES.local.md
+PLAN.local.md
+NOTES.local.md
+submission/

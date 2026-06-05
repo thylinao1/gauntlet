@@ -1,7 +1,7 @@
 # Gauntlet — Architecture
 
 A streaming, multi-stage red-team agent loop. The whole pipeline runs server-side in a Next.js
-route handler and streams to the client over SSE, so judges *watch* the attack happen live.
+route handler and streams to the client over SSE, so you *watch* the attack happen live.
 
 ```mermaid
 flowchart LR
@@ -25,14 +25,14 @@ flowchart LR
 3. **Target adapter** — uniform `respond()` over bundled vulnerable mocks, a pasted system prompt,
    or (roadmap) a real model / HTTP chat endpoint.
 4. **Judge (canary oracle)** — deterministic: compromise ⇔ the planted canary appears in output.
-   This is why the on-stage demo never false-positives.
+   This is why the demo never false-positives.
 5. **Scorer** — maps findings to the OWASP LLM Top 10 and computes a letter grade.
 6. **Guard** — when applied, a pattern-based input firewall blocks injections pre-flight and a
    redactor strips secrets from output. The guarded re-run trends to 0 compromises → grade A.
 
-## Why this shape wins the rubric
-- **Technical clarity (AI Round):** the planner→attacker→judge→scorer→guard loop is verbalizable
-  in one sentence — exactly what the Round-1 AI evaluator scores.
+## Why this shape
+- **Technical clarity:** the planner→attacker→judge→scorer→guard loop is verbalizable
+  in one sentence.
 - **Innovation:** generative, app-specific attacks (vs. a static checklist scanner).
 - **Impact/scalability:** any target via the adapter; any attack pack via the corpus.
 - **Design:** the live console + scorecard is the cinematic centerpiece.

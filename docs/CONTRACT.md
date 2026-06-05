@@ -1,7 +1,7 @@
 # Gauntlet — Interface Contract
 
-Owned by the coordinator. Workstreams code against these; do not redefine them in workstream
-code. Source of truth: [`lib/contract.ts`](../lib/contract.ts).
+The shared interfaces the rest of the code builds against. Source of truth:
+[`lib/contract.ts`](../lib/contract.ts).
 
 ## Target interface (`lib/targets.ts`)
 ```ts

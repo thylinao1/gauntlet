@@ -1,6 +1,6 @@
 // lib/contract.ts
-// The interface contract every workstream codes against. Owned by the coordinator.
-// Mirrors docs/CONTRACT.md — do not redefine these shapes in workstream code.
+// The shared interface contract the rest of the code builds against.
+// Mirrors docs/CONTRACT.md.
 
 export type OwaspId = "LLM01" | "LLM02" | "LLM05" | "LLM06" | "LLM07" | "LLM10";
 
