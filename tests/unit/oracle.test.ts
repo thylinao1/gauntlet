@@ -22,7 +22,7 @@ describe("oracle.checkSuccess", () => {
     expect(
       checkSuccess(
         { kind: "contains", needle: "<script>" },
-        "I won't render <script>x</script> — that's an XSS attempt.",
+        "I won't render <script>x</script>, that's an XSS attempt.",
         CANARY,
       ),
     ).toBe(false);

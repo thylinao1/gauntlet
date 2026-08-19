@@ -40,7 +40,7 @@ export interface AttackPayload {
   delivery?: "direct" | "indirect"; // how the payload reaches the target (UI label only)
 }
 
-/** Confirmed weakness — a probe that compromised the target. */
+/** A confirmed weakness: a probe that compromised the target. */
 export interface Finding {
   attemptId: string; // correlates a base finding with its guarded outcome
   owaspId: OwaspId;

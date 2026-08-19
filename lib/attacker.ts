@@ -1,6 +1,6 @@
 // lib/attacker.ts
 // Produces the probes for a run. With GAUNTLET_LIVE=true and an API key, a BLACK-BOX LLM attacker
-// generates app-specific, target-aware probes — it sees only the target's public name + description,
+// generates app-specific, target-aware probes. It sees only the target's public name and description,
 // never the canary or system prompt, so a successful hit is genuine discovery, not cheating. Any
 // failure (no key, bad response, parse error) falls back to the seeded corpus so the demo never breaks.
 

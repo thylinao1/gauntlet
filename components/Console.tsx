@@ -357,7 +357,7 @@ export default function Console() {
             <span className="font-mono text-xs text-muted">
               {attempts.length > 0
                 ? `${attempts.length}/${attempts[0].total} probes`
-                : "—"}
+                : "idle"}
             </span>
           </div>
           <div
@@ -507,7 +507,7 @@ function ScorePanel({
                   className={`font-mono font-semibold uppercase ${c.tested ? SEVERITY_COLOR[c.worst] : "text-muted"}`}
                   title={c.tested ? undefined : "not tested in this run"}
                 >
-                  {!c.tested ? "—" : c.worst === "none" ? "pass" : c.worst}
+                  {!c.tested ? "n/a" : c.worst === "none" ? "pass" : c.worst}
                 </span>
               </li>
             ))}

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gauntlet — autonomous AI red-team",
+  title: "Gauntlet: autonomous AI red-team",
   description:
     "Throw your AI in. See what survives. An autonomous agent that attacks your AI app, scores it against the OWASP LLM Top 10, and hands you a one-click runtime guard.",
 };

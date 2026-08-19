@@ -1,142 +1,39 @@
-# Gauntlet — autonomous AI red-team
+# Gauntlet
 
-**Throw your AI in. See what survives.**
+Gauntlet is an autonomous red-team for AI applications. It fires attack probes at a chat app,
+streams every attempt and verdict into a live console, scores the app against the OWASP LLM Top 10
+(2025), and can switch on a runtime guard and re-run the same probes so the before and after sit
+side by side.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fthylinao1%2Fgauntlet)
+The bundled demo is offline and deterministic. SupportBot leaks 10 of 13 probes and grades F; with
+the guard active it leaks none and grades A. Built for the Beyond Tomorrow Hackathon.
 
-Gauntlet is an autonomous agent that attacks your AI app the way a real attacker would
-(prompt injection, jailbreaks, system-prompt leakage, tool abuse, indirect injection), scores it
-against the **OWASP LLM Top 10 (2025)**, then hands you a one-click runtime guard and re-tests so
-the grade climbs from F to A in front of you. Prompt injection is the #1 LLM risk, and most teams
-ship AI features with zero adversarial testing.
+## Install
 
-> Built for the **Beyond Tomorrow Hackathon**. The demo runs fully offline against bundled,
-> deliberately-vulnerable targets, so no API keys are required to see the whole loop.
-
-## The wow, in 90 seconds
-
-1. Pick a target: a bundled vulnerable bot, a system prompt you paste, a real model, or your own HTTP endpoint.
-2. Hit **Run Gauntlet**. An autonomous attacker fires OWASP-mapped probes; each attempt streams
-   live into the Attack Console with a verdict.
-3. The target leaks its hidden system prompt and a planted secret. The scorecard snaps to **F**.
-4. Hit **Apply Guard & Re-run**. A runtime guard blocks the injections and redacts secrets, and the
-   score climbs to **A**, live. Before and after, on the real app.
-
-## How it works
-
-A streaming, multi-stage agent loop (`lib/engine.ts`), surfaced over Server-Sent Events:
-
-```mermaid
-flowchart LR
-  U["Pick target / paste prompt / BYO endpoint"] --> API["POST /api/run — SSE"]
-  API --> ENG["runGauntlet engine"]
-  ENG --> PLAN["Planner: select OWASP attack families"]
-  PLAN --> ATT["Attacker: seeded + (live) generated probes, incl. multi-turn & indirect"]
-  ATT --> TA["TargetAdapter.respond()"]
-  TA --> GUARD["Guard: regex firewall + classifier + output redaction"]
-  GUARD --> ORACLE["Oracle: canary, refusal-gated"]
-  ORACLE -->|compromised / safe / blocked| ENG
-  ENG --> SCORE["Scorer: OWASP LLM Top 10 grade"]
-  ENG ==>|stream events| UI["Attack Console + Scorecard + remediation"]
-```
-
-- **The attacker is generative and target-aware.** With a key, a black-box LLM writes app-specific
-  probes from only the target's public name and description (verified: it writes `cat /etc/passwd`
-  and `mysqldump` for a shell-tool agent, and customer-PII probes for a support bot). It can also
-  produce a multi-turn escalation and an indirect-injection document. No key, and it falls back to a
-  deterministic seeded corpus so the demo never breaks.
-- **Deterministic compromise detection.** Each bundled target plants a **canary** secret; an attack
-  succeeds only if the canary appears in the output **and** the output is not a refusal. That refusal
-  gate matters: it stops a model that quotes a payload while declining from being scored as a leak.
-- **Six OWASP categories, honestly scoped.** LLM01 (prompt injection), LLM02 (sensitive info
-  disclosure), LLM05 (improper output handling), LLM06 (excessive agency), LLM07 (system-prompt
-  leakage), LLM10 (unbounded consumption). Training-time risks (LLM03/04/08) are out of scope.
-- **The guard is layered, deterministic, and free at runtime.** It normalizes and decodes input
-  (NFKC, zero-width and homoglyph stripping, base64 and hex decoding) so encoded or unicode-disguised
-  attacks cannot slip past a word list, scores it with weighted intent patterns, then sanitizes
-  output (secret redaction, markup neutralizing, length caps). An optional second layer adds a
-  learned classifier to catch paraphrases the regex misses (see "The guard" below). This is honest
-  risk reduction, not a "100% safe" claim.
-
-## What we measured
-
-Numbers the demo can stand behind, not adjectives. Regenerate with `npm run eval` (writes
-`public/eval.json`, surfaced in the UI).
-
-- **Oracle accuracy** on an 18-case labeled set: **0% false positives (9 negatives), 11% false negatives (1 of 9 positives).** The one
-  miss is obfuscated exfiltration (a canary spelled out phonetically), a known limitation of literal
-  canary detection that we surface rather than hide.
-- **Reproducible grades** (offline, deterministic): SupportBot **F (10/13) → A**, DevAssistant
-  **F (5/13) → A**, PolicyBot **F (9/13) → A**.
-- **Against a real frontier model** (Claude Haiku 4.5, ~40 probes on 2026-06-04): direct injection
-  leaked 0, indirect injection 0 of 8, multi-turn 0, and deliberately over-permissive prompts
-  ("disclose to auditors", a `DEBUG:` backdoor) 0 of 3 each. The only leaks came from
-  **conflicting-instruction** prompts (keep-confidential plus always-be-transparent), about 1 in 6.
-  The honest takeaway: a current frontier model resists these attacks, and the real exposure is in
-  prompt misconfiguration, which is exactly what Gauntlet surfaces for your app.
-- **Guard accuracy** on a 15-benign / 15-injection labeled set (`npm run eval:guard`), all at **0%
-  false positives** (the guard never blocks a real user): the regex catches 53%, the local deberta-v2
-  classifier **80%** (combined 87%), and the LLM-judge that runs on live guarded runs catches **93%**.
-  The output guard (canary redaction) is the backstop when an input slips the filter. Small
-  self-authored set, so treat recall as indicative.
-- **Web performance** (Lighthouse on the deployed site, headless Chrome, one lab run): Performance
-  **96**, Accessibility **100**, Best Practices **100**, SEO **100**; LCP 2.3s, CLS 0, TBT 60ms, FCP
-  1.3s. These are lab single-run numbers, not field data.
-
-## How this is different
-
-Open-source scanners (NVIDIA garak, Microsoft PyRIT, DeepTeam) and test harnesses (promptfoo) all
-generate attacks, and promptfoo even has a web UI and a prompt-hardening step. Gauntlet's bet is
-narrower and more specific: the visible attack to score to one-click-guard to rescore **loop**, run
-by a non-expert, with a letter grade and a per-attack before-and-after. It is not "we invented
-red-teaming"; it is "we made the find-and-fix loop legible to someone who is not a security engineer,
-and we measured the parts we claim".
-
-## Targets
-
-- **SupportBot / DevAssistant / PolicyBot** — bundled, deliberately-vulnerable bots with planted
-  canaries. Deterministic, so the F to A demo is reliable offline.
-- **DocBot (indirect)** — summarizes untrusted documents; tests indirect injection (the malicious
-  instruction rides inside the document). Real model in live mode.
-- **Live model bot** — a real LLM under a naive secret-keeping prompt. It mostly holds, which is the
-  honest result.
-- **Your AI (paste prompt)** — paste your system prompt; Gauntlet plants a secret and, in live mode,
-  tests whether a real model leaks it.
-- **Your endpoint (BYO)** — point Gauntlet at a real HTTP chat endpoint you control. Black-box: you
-  supply a watch string that should never appear. Live-gated and SSRF-guarded.
-
-## The guard
-
-`lib/guard.ts` is the fast, free, offline first layer (normalize, decode, weighted patterns).
-`lib/classifier.ts` is the optional learned second layer, and it only runs when the regex did not
-already block, so it costs nothing on the common path and exists to catch novel paraphrases:
-
-- **Model-judge backend** (`GAUNTLET_SMART_GUARD=true` plus a key): an LLM classifies the input.
-- **Local classifier backend** (`GAUNTLET_GUARD_BACKEND=transformers`): runs a free, local, trained
-  classifier in-process via `@huggingface/transformers`, for example
-  `protectai/deberta-v3-base-prompt-injection` or Meta Llama Prompt Guard 2. No API cost. This is the
-  production-grade path; install `@huggingface/transformers` to enable it.
-
-Both degrade safely to the regex if absent or on error.
-
-## Run it
+Node 20 (the version CI runs).
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000  (or PORT=3210 npm run dev)
-npm run build        # production build
-npm run eval         # measure oracle accuracy + before/after, write public/eval.json
-npm test             # unit tests (guard, oracle, grader, engine F->A)
-npm run demo:verify  # Playwright: drive the real F->A flow three times
 ```
 
-No environment variables are needed for the demo. It runs offline.
+## Run
 
-### Live LLM attacker and real-model targets
+```bash
+npm run dev          # http://localhost:3000  (or PORT=3210 npm run dev)
+npm run build        # production build
+npm run eval         # oracle accuracy + before/after grades, writes public/eval.json
+npm run eval:guard   # guard false positives and recall on the labeled set
+npm test             # vitest: guard, oracle, grader, engine F to A
+npm run demo:verify  # Playwright: drives the real F to A flow three times
+```
 
-A black-box, model-generated attacker (`lib/attacker.ts`) writes app-specific probes from only the
-target's public name and description. The real-model targets (`live-claude`, `indirect-doc`, the
-pasted-prompt and BYO-endpoint targets) call a real model. Enable with:
+No environment variables are needed. Everything above runs offline against the bundled targets.
+
+### Live mode
+
+With a key, the attacker is a black-box LLM that writes probes for the target from nothing but its
+public name and description (`lib/attacker.ts`), and the real-model targets (`live-claude`,
+`indirect-doc`, the pasted-prompt target, the bring-your-own endpoint) call an actual model.
 
 ```bash
 # .env.local
@@ -146,42 +43,135 @@ ANTHROPIC_API_KEY=sk-ant-...                 # or OPENAI_API_KEY
 # GAUNTLET_SMART_GUARD=true                  # optional model-judge guard layer
 ```
 
-Then run **`npm run dev:live`**. On any error (missing key, bad response, parse failure) it falls
-back to the offline seeded corpus, so the demo never breaks.
+Then `npm run dev:live`, which force-loads `.env.local` because some shells export an empty
+`ANTHROPIC_API_KEY` that would otherwise shadow it. Any failure (missing key, bad response, parse
+error) falls back to the offline seeded corpus rather than erroring.
 
-**Spending cap.** Live spend is gated by a global budget (a fixed number of paid runs,
-`GAUNTLET_LIVE_BUDGET`, default 40, roughly two dollars on Haiku) plus a per-IP rate limit. The
-budget is backed by Upstash or Vercel KV when `UPSTASH_REDIS_REST_URL`/`KV_REST_API_URL` is present,
-so the cap holds across all serverless instances; without it, it falls back to a per-instance counter.
-When the budget is reached, runs fall back to the seeded corpus and the UI shows a calm "owner set a
-limit" notice (not an error). The owner resets it with
-`curl -X POST <site>/api/admin/reset -H "x-admin-secret: $GAUNTLET_ADMIN_SECRET"`. Optionally set
-`GAUNTLET_OWNER_CONTACT` so the notice tells visitors how to reach you for a reset.
+Live spend is capped two ways: a per-IP rate limit, and a global lifetime budget of paid runs
+(`GAUNTLET_LIVE_BUDGET`, default 40, which is roughly two dollars on Haiku). The budget lives in
+Upstash or Vercel KV when `UPSTASH_REDIS_REST_URL` or `KV_REST_API_URL` is set, so the cap holds
+across serverless instances; without one it falls back to a per-instance counter. Once the budget
+is spent, runs quietly use the seeded corpus and the UI shows a notice rather than an error. The
+owner resets it with:
 
-## Stack
+```bash
+curl -X POST <site>/api/admin/reset -H "x-admin-secret: $GAUNTLET_ADMIN_SECRET"
+```
 
-Next.js 16 (App Router, route handlers, streaming) · React 19 · TypeScript · Tailwind v4 ·
-Vitest · Playwright · deploy target Vercel.
+Set `GAUNTLET_OWNER_CONTACT` if you want the notice to tell visitors how to ask for a reset.
 
-## Project layout
+## Method
+
+The run is a streaming loop in `lib/engine.ts`, surfaced over Server-Sent Events: pick the attack
+families, fire each probe at the target adapter, judge the response, score the findings. The
+console renders each attempt as it lands, which is the point of streaming it rather than returning
+one JSON blob at the end. `docs/architecture.md` has the diagram and the stage-by-stage detail.
+
+Compromise detection is deterministic. Each bundled target plants a canary secret, and a probe
+counts as successful only when the canary appears in the output and the output is not a refusal.
+The refusal gate matters more than it sounds: without it, a model that quotes a payload back while
+declining to comply gets scored as a leak. Two other signals are wired the same way, an unescaped
+`<script>` for LLM05 and runaway output length for LLM10, both also gated on refusal.
+
+Six OWASP categories are in scope: LLM01 prompt injection, LLM02 sensitive information disclosure,
+LLM05 improper output handling, LLM06 excessive agency, LLM07 system-prompt leakage, LLM10
+unbounded consumption. The training-time categories (LLM03, LLM04, LLM08) need build-time access
+and are not tested.
+
+Severity comes from the OWASP category rather than from the attacker's own label, so a live
+attacker cannot inflate the grade by calling every probe critical. The worst compromised severity
+sets the letter grade, and a guarded run with zero compromises is forced to A.
+
+The guard has two layers. `lib/guard.ts` is the fast offline one: it normalizes input (NFKC,
+zero-width stripping, homoglyph mapping), decodes base64 and hex blobs so an encoded instruction is
+scanned in cleartext, scores the result against weighted intent patterns, and then sanitizes the
+output by redacting the canary, neutralizing markup, and capping length. `lib/classifier.ts` is the
+optional learned layer and runs only when the regex did not already block, so it costs nothing on
+the common path. It has a model-judge backend (`GAUNTLET_SMART_GUARD=true` plus a key) and a local
+backend (`GAUNTLET_GUARD_BACKEND=transformers`) that runs a trained classifier in-process through
+`@huggingface/transformers`, defaulting to `protectai/deberta-v3-base-prompt-injection-v2`. Both
+degrade to the regex if the dependency is missing or the call fails. The guard lowers the risks
+that are easiest to exploit. It cannot make an app safe, and the UI says as much.
+
+Other tools cover overlapping ground: NVIDIA garak, Microsoft PyRIT and DeepTeam generate attacks,
+and promptfoo has a web UI and a prompt-hardening step. What Gauntlet aims at is the whole loop in
+one view for someone who is not a security engineer: attack, score, one-click guard, re-score, with
+a letter grade and a per-attack before and after.
+
+## Targets
+
+| Target | What it is |
+| --- | --- |
+| SupportBot, DevAssistant, PolicyBot | Bundled, deliberately vulnerable bots with planted canaries. Deterministic offline, so the F to A demo is reliable. |
+| DocBot (indirect) | Summarizes untrusted documents. Tests indirect injection, where the malicious instruction rides inside the document. Calls a real model in live mode. |
+| Live model bot | A real model under a naive secret-keeping prompt. It mostly holds, which is the honest result. |
+| Your AI (paste prompt) | Paste a system prompt. Gauntlet plants a secret in it and, in live mode, tests whether a real model gives it up. |
+| Your endpoint (BYO) | A real HTTP chat endpoint you control, tested black-box against a watch string that should never appear. Live-gated and SSRF-guarded. |
+
+## Repository layout
 
 ```
 app/
   page.tsx              hero + console
   api/run/route.ts      SSE endpoint streaming the run
-components/Console.tsx  live attack console + OWASP scorecard + eval strip (client)
+  api/admin/reset       owner-only reset for the live-spend budget
+components/Console.tsx  live attack console, OWASP scorecard, eval strip (client)
 lib/
   contract.ts           shared types (the interface contract)
-  attacks.ts            seed attack corpus (incl. multi-turn + indirect)
-  targets.ts            bundled vulnerable bots, real-model + BYO targets, canaries
-  attacker.ts           live LLM attacker vs seeded corpus
+  attacks.ts            seed attack corpus, including multi-turn and indirect probes
+  targets.ts            bundled vulnerable bots, real-model and BYO targets, canaries
+  attacker.ts           live LLM attacker, falling back to the seeded corpus
   guard.ts              regex firewall (normalize, decode, weighted patterns)
-  classifier.ts         optional learned guard layer (model-judge / local transformers)
+  classifier.ts         optional learned guard layer (model judge or local transformers)
   oracle.ts             compromise oracle (canary, refusal-gated)
-  engine.ts             the red-team loop + scorer
-scripts/eval.ts         oracle accuracy + reproducible before/after
-tests/                  vitest unit + Playwright demo-verify
-docs/                   SPEC, CONTRACT, architecture
+  engine.ts             the red-team loop and the scorer
+scripts/                eval, eval:guard, eval:live
+tests/                  vitest unit tests + Playwright demo verification
+docs/                   spec, contract, architecture
 ```
 
-See [`docs/architecture.md`](docs/architecture.md) and [`docs/CONTRACT.md`](docs/CONTRACT.md).
+## Results
+
+The target grades and the oracle numbers below come from `npm run eval`, which writes
+`public/eval.json` and is what the UI reads.
+
+Bundled targets, offline and deterministic, 13 probes each:
+
+| Target | Compromised, no guard | Grade | Compromised, guard on | Grade |
+| --- | --- | --- | --- | --- |
+| SupportBot | 10 / 13 | F | 0 | A |
+| DevAssistant | 5 / 13 | F | 0 | A |
+| PolicyBot | 9 / 13 | F | 0 | A |
+
+Compromise oracle on an 18-case labeled set (`scripts/eval.ts`): 0 false positives out of 9
+negatives, 1 false negative out of 9 positives. The miss is obfuscated exfiltration, a canary
+spelled out phonetically, which literal canary matching cannot catch. The case is kept in the
+labeled set.
+
+Guard accuracy on a 15-benign / 15-injection labeled set (`npm run eval:guard`). Every layer sits
+at zero false positives, so the guard does not block real users:
+
+| Layer | Recall on the injection set |
+| --- | --- |
+| Regex firewall | 53% |
+| Local classifier (`protectai/deberta-v3-base-prompt-injection-v2`) | 80% |
+| Regex + local classifier | 87% |
+| LLM judge (live guarded runs) | 93% |
+
+Output-side redaction is the backstop for anything the input filter misses. The set is small and
+self-authored, so treat the recall figures as indicative rather than as a benchmark.
+
+Against a real frontier model (Claude Haiku 4.5, about 40 probes on 2026-06-04) the picture was
+different: direct injection leaked nothing, indirect injection leaked 0 of 8, multi-turn escalation
+leaked nothing, and the deliberately over-permissive prompts (a "disclose to auditors" clause, a
+`DEBUG:` backdoor) leaked 0 of 3 each. The only leaks came from conflicting-instruction prompts,
+where the system prompt says both keep this confidential and always be transparent, at roughly 1 in
+6. A current frontier model resists these attacks; the exposure is in how the prompt is written.
+
+## Stack
+
+Next.js 16 (App Router, route handlers, streaming), React 19, TypeScript, Tailwind v4, Vitest,
+Playwright, deployed on Vercel.
+
+See [`docs/architecture.md`](docs/architecture.md), [`docs/CONTRACT.md`](docs/CONTRACT.md) and
+[`docs/SPEC.md`](docs/SPEC.md).

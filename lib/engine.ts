@@ -74,7 +74,7 @@ function describeOutputGuard(before: string, after: string, canary: string): str
 }
 
 // The compromise oracle (looksLikeRefusal + checkSuccess) lives in ./oracle so it can be
-// unit-tested and reused by the eval harness.
+// unit-tested and reused by scripts/eval.ts.
 
 function scoreRun(
   findings: Finding[],
@@ -132,7 +132,7 @@ async function executeProbe(
       if (inj.blocked) {
         return {
           verdict: "blocked",
-          response: "⛔ Blocked by Gauntlet guard (input filter).",
+          response: "Blocked by Gauntlet guard (input filter).",
           guardReason: inj.reason,
           canaryHit: false,
         };
@@ -188,7 +188,7 @@ export async function* runGauntlet(
     type: "phase",
     ts: Date.now(),
     phase: "recon",
-    detail: `Target acquired: ${target.name}${guarded ? " — runtime guard ACTIVE" : ""}`,
+    detail: `Target acquired: ${target.name}${guarded ? " (runtime guard ACTIVE)" : ""}`,
   };
   await sleep(attemptDelay());
 

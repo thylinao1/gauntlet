@@ -1,6 +1,6 @@
 // lib/llm.ts
 // Shared LLM client (Anthropic preferred, OpenAI fallback) used by the attacker (to generate
-// probes) and by the live target (a real model under test). No SDK dependency — fetch only.
+// probes) and by the live target (a real model under test). No SDK dependency, just fetch.
 // Empty/whitespace keys are treated as absent (some shells export an empty ANTHROPIC_API_KEY).
 
 export interface LlmMessage {

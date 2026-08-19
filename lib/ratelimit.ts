@@ -77,7 +77,7 @@ export async function liveBudgetStatus(): Promise<BudgetStatus> {
       const used = Number(await redisCmd("get", COUNTER_KEY)) || 0;
       return { used, limit: LIVE_BUDGET, available: used < LIVE_BUDGET, global: true };
     } catch {
-      /* Redis unreachable — fall back to the in-memory counter */
+      /* Redis unreachable: fall back to the in-memory counter */
     }
   }
   return {

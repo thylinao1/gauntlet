@@ -116,7 +116,7 @@ export async function classifyInjection(
   if (process.env.GAUNTLET_GUARD_BACKEND === "transformers") {
     const local = await transformersClassify(text);
     if (local) return local;
-    // local backend unavailable (not installed / failed) — fall through to the model judge
+    // local backend unavailable (not installed, or it failed): fall through to the model judge
   }
   if (smartGuardEnabled() && allowLive) return modelJudge(text);
   return null;
@@ -128,7 +128,7 @@ export async function assessInjectionSmart(
   allowLive = false,
 ): Promise<GuardAssessment> {
   const base = assessInjection(rawPrompt);
-  if (base.blocked) return base; // heuristic already caught it — no model call needed
+  if (base.blocked) return base; // heuristic already caught it, so no model call is needed
   const cls = await classifyInjection(rawPrompt, allowLive);
   if (cls?.injection) {
     return {

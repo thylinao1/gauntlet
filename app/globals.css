@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Gauntlet — security-operations console theme. Intentional, not a template default.
+/* Gauntlet security-operations console theme.
    Tailwind v4 @theme tokens become utilities (bg-surface, text-signal, border-edge, …). */
 @theme {
   --color-ink: oklch(14% 0.012 256);
